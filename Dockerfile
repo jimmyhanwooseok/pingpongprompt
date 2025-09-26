@@ -29,6 +29,10 @@ COPY backend/ ./
 # 프론트엔드 빌드 결과 복사
 COPY --from=frontend-builder /app/frontend/build ./frontend/build
 
+# 빌드 파일 확인을 위한 디버그
+RUN ls -la frontend/
+RUN ls -la frontend/build/
+
 # 포트 설정
 EXPOSE $PORT
 

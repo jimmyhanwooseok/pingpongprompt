@@ -11,7 +11,14 @@ import os
 app = FastAPI()
 
 # 정적 파일 서빙 설정 (프론트엔드 빌드 파일)
-frontend_build_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "build")
+frontend_build_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
+
+# 디버그: 경로 확인
+print(f"Frontend build path: {frontend_build_path}")
+print(f"Frontend build path exists: {os.path.exists(frontend_build_path)}")
+if os.path.exists(frontend_build_path):
+    print(f"Contents: {os.listdir(frontend_build_path)}")
+
 if os.path.exists(frontend_build_path):
     app.mount("/static", StaticFiles(directory=os.path.join(frontend_build_path, "static")), name="static")
 
@@ -19,9 +26,11 @@ if os.path.exists(frontend_build_path):
 @app.get("/")
 async def serve_frontend():
     frontend_index = os.path.join(frontend_build_path, "index.html")
+    print(f"Looking for index.html at: {frontend_index}")
+    print(f"Index.html exists: {os.path.exists(frontend_index)}")
     if os.path.exists(frontend_index):
         return FileResponse(frontend_index)
-    return {"message": "Frontend not built yet"}
+    return {"message": "Frontend not built yet", "path": frontend_build_path, "exists": os.path.exists(frontend_build_path)}
 
 # CORS 설정
 from fastapi.middleware.cors import CORSMiddleware
