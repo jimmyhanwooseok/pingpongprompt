@@ -436,4 +436,5 @@ async def search_content(검색어: Optional[str] = None, 카테고리: Optional
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port) 

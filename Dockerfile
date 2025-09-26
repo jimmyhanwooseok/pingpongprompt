@@ -30,7 +30,7 @@ COPY backend/ ./
 COPY --from=frontend-builder /app/frontend/build ./frontend/build
 
 # 포트 설정
-EXPOSE 8000
+EXPOSE $PORT
 
 # 앱 실행
 CMD ["python", "app/main.py"]
