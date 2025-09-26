@@ -1,11 +1,27 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import sqlite3
 from typing import List, Optional
 from datetime import datetime
 import json
+import os
 
 app = FastAPI()
+
+# 정적 파일 서빙 설정 (프론트엔드 빌드 파일)
+frontend_build_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "build")
+if os.path.exists(frontend_build_path):
+    app.mount("/static", StaticFiles(directory=os.path.join(frontend_build_path, "static")), name="static")
+
+# 루트 경로에서 React 앱 서빙
+@app.get("/")
+async def serve_frontend():
+    frontend_index = os.path.join(frontend_build_path, "index.html")
+    if os.path.exists(frontend_index):
+        return FileResponse(frontend_index)
+    return {"message": "Frontend not built yet"}
 
 # CORS 설정
 from fastapi.middleware.cors import CORSMiddleware
