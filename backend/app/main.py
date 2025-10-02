@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 import sqlite3
 from typing import List, Optional
@@ -54,7 +54,9 @@ async def serve_frontend():
     print(f"Looking for index.html at: {frontend_index}")
     print(f"Index.html exists: {os.path.exists(frontend_index)}")
     if os.path.exists(frontend_index):
-        return FileResponse(frontend_index)
+        with open(frontend_index, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HTMLResponse(content=content)
     return {"message": "Frontend not built yet", "path": frontend_build_path, "exists": os.path.exists(frontend_build_path)}
 
 # CORS 설정
