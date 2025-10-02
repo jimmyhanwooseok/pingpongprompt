@@ -479,6 +479,23 @@ function App() {
     }
   };
 
+  // [변수] 패턴을 빨간색으로 하이라이트하는 함수
+  const highlightBrackets = (text) => {
+    if (!text) return '';
+    
+    const parts = text.split(/(\[[^\]]+\])/g);
+    
+    return parts.map((part, index) => {
+      if (part.match(/\[[^\]]+\]/)) {
+        // [변수] 부분 - 빨간색
+        return <span key={index} style={{color: 'red', fontWeight: 'bold'}}>{part}</span>;
+      } else {
+        // 나머지 텍스트 - 검정색 (기본)
+        return part;
+      }
+    });
+  };
+
   const handleCreateTemplate = () => {
     setEditingTemplate(null);
     setTemplateForm({
@@ -1076,7 +1093,7 @@ function App() {
                 >
                   {copied ? '복사됨!' : '복사'}
                 </button>
-                <pre>{finalPrompt}</pre>
+                <pre>{highlightBrackets(finalPrompt)}</pre>
               </div>
             )}
           </div>
