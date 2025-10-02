@@ -191,7 +191,7 @@ async def create_template(template: Template):
         )
         conn.commit()
         template_id = c.lastrowid
-        return {"id": template_id, **template.model_dump()}
+        return {"id": template_id, **template.dict()}
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=400, detail="Template name already exists")
     finally:
