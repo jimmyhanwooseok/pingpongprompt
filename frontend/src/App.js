@@ -61,6 +61,7 @@ function App() {
     description: '',
     color: '#3b82f6'
   });
+  const [allTemplates, setAllTemplates] = useState([]); // 모든 템플릿 저장
 
   useEffect(() => {
     fetchTemplates();
@@ -75,6 +76,7 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/templates/`);
       const data = await response.json();
+      setAllTemplates(data);
       setTemplates(data);
     } catch (err) {
       setError('템플릿 목록을 불러오는데 실패했습니다.');
@@ -107,7 +109,7 @@ function App() {
   const handleFolderSelect = (folder) => {
     setSelectedFolder(folder);
     // 선택된 폴더의 템플릿만 필터링
-    const filteredTemplates = templates.filter(template => 
+    const filteredTemplates = allTemplates.filter(template => 
       folder ? template.folder_id === folder.id : !template.folder_id
     );
     setTemplates(filteredTemplates);
@@ -201,14 +203,20 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ folder_id: folderId })
       });
-      fetchTemplates();
-      // 선택된 폴더가 있으면 해당 폴더의 템플릿만 다시 필터링
+      
+      // 모든 템플릿 다시 로드
+      const response = await fetch(`${API_BASE_URL}/templates/`);
+      const updatedTemplates = await response.json();
+      setAllTemplates(updatedTemplates);
+      
+      // 선택된 폴더가 있으면 해당 폴더의 템플릿만 필터링
       if (selectedFolder) {
-        const updatedTemplates = await fetch(`${API_BASE_URL}/templates/`).then(r => r.json());
         const filteredTemplates = updatedTemplates.filter(template => 
           template.folder_id === selectedFolder.id
         );
         setTemplates(filteredTemplates);
+      } else {
+        setTemplates(updatedTemplates);
       }
     } catch (err) {
       setError('템플릿 이동에 실패했습니다.');
@@ -761,7 +769,7 @@ function App() {
                 >
                   <div className="folder-icon">📁</div>
                   <div className="folder-name">전체</div>
-                  <div className="folder-count">({templates.length}개)</div>
+                  <div className="folder-count">({allTemplates.length}개)</div>
                 </div>
                 {folders.map(folder => (
                   <div 
@@ -773,7 +781,7 @@ function App() {
                     <div className="folder-icon" style={{ color: folder.color }}>📁</div>
                     <div className="folder-name">{folder.name}</div>
                     <div className="folder-count">
-                      ({templates.filter(t => t.folder_id === folder.id).length}개)
+                      ({allTemplates.filter(t => t.folder_id === folder.id).length}개)
                     </div>
                     <div className="folder-actions">
                       <button 
