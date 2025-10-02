@@ -353,7 +353,11 @@ async def update_template(template_id: int, template: TemplateUpdate):
     return {"id": template_id, **template.model_dump()}
 
 @app.put("/templates/{template_id}/move")
-async def move_template_to_folder(template_id: int, folder_id: int):
+async def move_template_to_folder(template_id: int, request: dict):
+    folder_id = request.get("folder_id")
+    if folder_id is None:
+        raise HTTPException(status_code=400, detail="folder_id is required")
+    
     conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE templates SET folder_id = ? WHERE id = ?", (folder_id, template_id))
