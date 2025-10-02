@@ -51,10 +51,22 @@ function App() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
 
+  // 폴더 관련 상태
+  const [folders, setFolders] = useState([]);
+  const [selectedFolder, setSelectedFolder] = useState(null);
+  const [showFolderManager, setShowFolderManager] = useState(false);
+  const [editingFolder, setEditingFolder] = useState(null);
+  const [folderForm, setFolderForm] = useState({
+    name: '',
+    description: '',
+    color: '#3b82f6'
+  });
+
   useEffect(() => {
     fetchTemplates();
     fetchAvailableTags();
     fetchContents();
+    fetchFolders();
   }, []);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || '';
@@ -77,6 +89,122 @@ function App() {
       setAvailableTags(data);
     } catch (err) {
       console.error('태그 목록을 불러오는데 실패했습니다:', err);
+    }
+  };
+
+  // 폴더 관련 함수들
+  const fetchFolders = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/folders/`);
+      const data = await response.json();
+      setFolders(data);
+    } catch (err) {
+      setError('폴더 목록을 불러오는데 실패했습니다.');
+      console.error(err);
+    }
+  };
+
+  const handleFolderSelect = (folder) => {
+    setSelectedFolder(folder);
+    // 선택된 폴더의 템플릿만 필터링
+    const filteredTemplates = templates.filter(template => 
+      folder ? template.folder_id === folder.id : !template.folder_id
+    );
+    setTemplates(filteredTemplates);
+  };
+
+  const handleCreateFolder = async () => {
+    if (!folderForm.name.trim()) {
+      setError('폴더 이름을 입력해주세요.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/folders/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(folderForm)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      setShowFolderManager(false);
+      setFolderForm({ name: '', description: '', color: '#3b82f6' });
+      fetchFolders();
+    } catch (err) {
+      setError('폴더 생성에 실패했습니다.');
+      console.error(err);
+    }
+  };
+
+  const handleEditFolder = (folder) => {
+    setEditingFolder(folder);
+    setFolderForm({
+      name: folder.name,
+      description: folder.description || '',
+      color: folder.color
+    });
+    setShowFolderManager(true);
+  };
+
+  const handleUpdateFolder = async () => {
+    if (!folderForm.name.trim()) {
+      setError('폴더 이름을 입력해주세요.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/folders/${editingFolder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(folderForm)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      setShowFolderManager(false);
+      setEditingFolder(null);
+      setFolderForm({ name: '', description: '', color: '#3b82f6' });
+      fetchFolders();
+    } catch (err) {
+      setError('폴더 수정에 실패했습니다.');
+      console.error(err);
+    }
+  };
+
+  const handleDeleteFolder = async (folderId) => {
+    if (!window.confirm('정말 삭제하시겠습니까?')) return;
+
+    try {
+      await fetch(`${API_BASE_URL}/folders/${folderId}`, {
+        method: 'DELETE',
+      });
+      fetchFolders();
+      if (selectedFolder && selectedFolder.id === folderId) {
+        setSelectedFolder(null);
+        fetchTemplates(); // 모든 템플릿 다시 로드
+      }
+    } catch (err) {
+      setError('폴더 삭제에 실패했습니다.');
+      console.error(err);
+    }
+  };
+
+  const handleMoveTemplate = async (templateId, folderId) => {
+    try {
+      await fetch(`${API_BASE_URL}/templates/${templateId}/move`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder_id: folderId })
+      });
+      fetchTemplates();
+    } catch (err) {
+      setError('템플릿 이동에 실패했습니다.');
+      console.error(err);
     }
   };
 
@@ -606,6 +734,66 @@ function App() {
         {activeTab === 'templates' && (
           <div className="templates-section">
             <h2>템플릿 목록</h2>
+            
+            {/* 폴더 그리드 */}
+            <div className="folders-section">
+              <div className="folders-header">
+                <h3>📁 폴더</h3>
+                <button 
+                  onClick={() => setShowFolderManager(true)}
+                  className="new-folder-btn"
+                >
+                  📁 새 폴더
+                </button>
+              </div>
+              <div className="folders-grid">
+                <div 
+                  className={`folder-card ${!selectedFolder ? 'selected' : ''}`}
+                  onClick={() => handleFolderSelect(null)}
+                >
+                  <div className="folder-icon">📁</div>
+                  <div className="folder-name">전체</div>
+                  <div className="folder-count">({templates.length}개)</div>
+                </div>
+                {folders.map(folder => (
+                  <div 
+                    key={folder.id}
+                    className={`folder-card ${selectedFolder?.id === folder.id ? 'selected' : ''}`}
+                    onClick={() => handleFolderSelect(folder)}
+                    style={{ borderColor: folder.color }}
+                  >
+                    <div className="folder-icon" style={{ color: folder.color }}>📁</div>
+                    <div className="folder-name">{folder.name}</div>
+                    <div className="folder-count">
+                      ({templates.filter(t => t.folder_id === folder.id).length}개)
+                    </div>
+                    <div className="folder-actions">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleEditFolder(folder); }}
+                        className="folder-edit-btn"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
+                        className="folder-delete-btn"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 선택된 폴더 표시 */}
+            {selectedFolder && (
+              <div className="selected-folder-info">
+                <h3>📁 {selectedFolder.name} 템플릿</h3>
+                <p>{selectedFolder.description}</p>
+              </div>
+            )}
+
             <div className="templates-grid">
               {templates.map(template => (
                 <div
@@ -920,6 +1108,63 @@ function App() {
               <div className="modal-btns">
                 <button onClick={handleTemplateSave} className="save-btn">저장</button>
                 <button onClick={() => setShowTemplateManager(false)} className="cancel-btn">취소</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 폴더 관리 모달 */}
+        {showFolderManager && (
+          <div className="modal-backdrop">
+            <div className="modal">
+              <h3>{editingFolder ? '폴더 수정' : '새 폴더 만들기'}</h3>
+              
+              <div className="form-group">
+                <label>폴더 이름:</label>
+                <input
+                  type="text"
+                  value={folderForm.name}
+                  onChange={(e) => setFolderForm({...folderForm, name: e.target.value})}
+                  placeholder="예: 상담 템플릿"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>설명:</label>
+                <input
+                  type="text"
+                  value={folderForm.description}
+                  onChange={(e) => setFolderForm({...folderForm, description: e.target.value})}
+                  placeholder="폴더에 대한 간단한 설명"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>색상:</label>
+                <input
+                  type="color"
+                  value={folderForm.color}
+                  onChange={(e) => setFolderForm({...folderForm, color: e.target.value})}
+                />
+              </div>
+
+              <div className="modal-btns">
+                <button 
+                  onClick={editingFolder ? handleUpdateFolder : handleCreateFolder} 
+                  className="save-btn"
+                >
+                  {editingFolder ? '수정' : '생성'}
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowFolderManager(false);
+                    setEditingFolder(null);
+                    setFolderForm({ name: '', description: '', color: '#3b82f6' });
+                  }} 
+                  className="cancel-btn"
+                >
+                  취소
+                </button>
               </div>
             </div>
           </div>
