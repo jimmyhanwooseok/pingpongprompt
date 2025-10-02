@@ -863,31 +863,31 @@ main {
 
 .folders-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.8rem;
 }
 
 @media (max-width: 1200px) {
   .folders-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
 @media (max-width: 768px) {
   .folders-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 @media (max-width: 480px) {
   .folders-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 .folder-card {
   background: #f8fafc;
-  border: 2px solid #e2e8f0;
+  border: 3px solid #e2e8f0;
   border-radius: 8px;
   padding: 1rem;
   cursor: pointer;
@@ -909,8 +909,20 @@ main {
 }
 
 .folder-icon {
-  font-size: 2rem;
+  font-size: 1.5rem;
   margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  margin: 0 auto 0.5rem auto;
+}
+
+.folder-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .folder-name {
