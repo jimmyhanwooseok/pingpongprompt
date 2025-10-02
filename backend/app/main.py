@@ -632,8 +632,6 @@ async def generate_sample_phrases(request: AIGenerationRequest):
 - 키워드를 자연스럽게 포함해서 생성
 - 구체적인 상황과 감정 표현 포함
 - 실제 아동이 말할 법한 자연스러운 표현
-
-키워드: {request.keyword}
 """
 
         response = client.chat.completions.create(
@@ -692,10 +690,11 @@ async def generate_experience_analysis(request: AIGenerationRequest):
 
 예시:
 - "상대와 함께 상상하는 것을 즐김."
-- "너는 미니특공대를 좋아해."
-- "미니특공대가 합체해서 싸울 때 멋있어."
-- "미니특공대 보는데 볼트의 파란색 로봇이 멋있는 것 같아."
-- "미니특공대 인형을 가지고 있어."
+- "그거 하는 거 좋아해."
+- "그거 엄청 크게 떠 있는거 본 적 있어."
+- "그거에서 뭔가 만나면 화살 공격 피하려고 좌우로 움직였어."
+- "그거를 열심히 해서 뭔가를 돕고 싶어."
+- "그거 잘 했다고 경비 아저씨가 사탕 주셨어."
 """
 
         response = client.chat.completions.create(
