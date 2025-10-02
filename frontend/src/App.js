@@ -202,6 +202,14 @@ function App() {
         body: JSON.stringify({ folder_id: folderId })
       });
       fetchTemplates();
+      // 선택된 폴더가 있으면 해당 폴더의 템플릿만 다시 필터링
+      if (selectedFolder) {
+        const updatedTemplates = await fetch(`${API_BASE_URL}/templates/`).then(r => r.json());
+        const filteredTemplates = updatedTemplates.filter(template => 
+          template.folder_id === selectedFolder.id
+        );
+        setTemplates(filteredTemplates);
+      }
     } catch (err) {
       setError('템플릿 이동에 실패했습니다.');
       console.error(err);
@@ -813,7 +821,29 @@ function App() {
                     </div>
                   )}
                   
+                  {/* 폴더 정보 표시 */}
+                  {template.folder_name && (
+                    <div className="template-folder">
+                      <span className="folder-badge" style={{ backgroundColor: template.folder_color }}>
+                        📁 {template.folder_name}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="template-actions">
+                    <select 
+                      value={template.folder_id || ''} 
+                      onChange={(e) => handleMoveTemplate(template.id, parseInt(e.target.value) || null)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="folder-select"
+                    >
+                      <option value="">폴더 선택</option>
+                      {folders.map(folder => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleEditTemplate(template); }}
                       className="edit-btn"

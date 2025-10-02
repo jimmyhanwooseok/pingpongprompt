@@ -980,6 +980,36 @@ main {
   font-size: 0.9rem;
 }
 
+/* 템플릿 폴더 관련 스타일 */
+.template-folder {
+  margin: 0.5rem 0;
+}
+
+.folder-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+}
+
+.folder-select {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.folder-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
 /* AI 생성기 스타일 */
 .ai-generator-section {
   margin-top: 30px;
