@@ -637,7 +637,12 @@ async def get_ai_generation_history():
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))
+    port_str = os.environ.get("PORT", "8000")
+    try:
+        port = int(port_str)
+    except ValueError:
+        print(f"경고: PORT 환경변수가 유효하지 않습니다: {port_str}")
+        port = 8000
     print(f"서버를 포트 {port}에서 시작합니다...")
     print(f"환경변수 PORT: {os.environ.get('PORT', '설정되지 않음')}")
     uvicorn.run(app, host="0.0.0.0", port=port) 
