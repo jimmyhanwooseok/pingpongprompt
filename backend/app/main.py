@@ -18,8 +18,10 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     print("경고: OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
+    print("AI 생성 기능을 사용하려면 환경변수를 설정해주세요.")
     client = None
 else:
+    print(f"OpenAI API 키가 설정되었습니다: {openai_api_key[:10]}...")
     client = OpenAI(api_key=openai_api_key)
 
 app = FastAPI()
@@ -626,4 +628,6 @@ async def get_ai_generation_history():
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
+    print(f"서버를 포트 {port}에서 시작합니다...")
+    print(f"환경변수 PORT: {os.environ.get('PORT', '설정되지 않음')}")
     uvicorn.run(app, host="0.0.0.0", port=port) 
