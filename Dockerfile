@@ -32,6 +32,7 @@ COPY --from=frontend-builder /app/frontend/build ./frontend/build
 # 빌드 파일 확인을 위한 디버그
 RUN ls -la frontend/
 RUN ls -la frontend/build/
+RUN find . -name "index.html" -type f
 
 # 포트 설정
 EXPOSE $PORT

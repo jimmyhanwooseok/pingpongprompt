@@ -41,12 +41,22 @@ function App() {
   });
   const [contentSearchTerm, setContentSearchTerm] = useState('');
   const [contentCategory, setContentCategory] = useState('');
-  const [activeTab, setActiveTab] = useState('templates'); // 'templates' 또는 'contents'
+  const [activeTab, setActiveTab] = useState('templates'); // 'templates', 'contents', 'ai-generator'
+  
+  // AI 생성기 상태
+  const [aiKeyword, setAiKeyword] = useState('');
+  const [aiGenerationType, setAiGenerationType] = useState('sample_phrase');
+  const [aiCount, setAiCount] = useState(10);
+  const [aiGeneratedSentences, setAiGeneratedSentences] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [aiHistory, setAiHistory] = useState([]);
 
   useEffect(() => {
     fetchTemplates();
     fetchAvailableTags();
     fetchContents();
+    fetchAIHistory();
   }, []);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || '';
@@ -395,6 +405,64 @@ function App() {
     }
   };
 
+  // AI 생성기 관련 함수들
+  const fetchAIHistory = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/history/`);
+      const data = await response.json();
+      setAiHistory(data);
+    } catch (err) {
+      console.error('AI 히스토리 로딩 에러:', err);
+    }
+  };
+
+  const handleAIGenerate = async () => {
+    if (!aiKeyword.trim()) {
+      setAiError('키워드를 입력해주세요.');
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const endpoint = aiGenerationType === 'sample_phrase' 
+        ? '/ai/sample-phrase/' 
+        : '/ai/experience/';
+      
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          keyword: aiKeyword,
+          generation_type: aiGenerationType,
+          count: aiCount
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setAiGeneratedSentences(data.generated_sentences);
+      fetchAIHistory(); // 히스토리 새로고침
+    } catch (err) {
+      setAiError('AI 생성에 실패했습니다.');
+      console.error(err);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleCopySentence = (sentence) => {
+    navigator.clipboard.writeText(sentence);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -413,13 +481,21 @@ function App() {
             >
               콘텐츠 정보
             </button>
+            <button 
+              className={`tab-btn ${activeTab === 'ai-generator' ? 'active' : ''}`}
+              onClick={() => setActiveTab('ai-generator')}
+            >
+              AI 생성기
+            </button>
           </div>
-          <button 
-            onClick={activeTab === 'templates' ? handleCreateTemplate : handleCreateContent}
-            className="create-btn"
-          >
-            + 새 {activeTab === 'templates' ? '템플릿' : '콘텐츠'} 만들기
-          </button>
+          {activeTab !== 'ai-generator' && (
+            <button 
+              onClick={activeTab === 'templates' ? handleCreateTemplate : handleCreateContent}
+              className="create-btn"
+            >
+              + 새 {activeTab === 'templates' ? '템플릿' : '콘텐츠'} 만들기
+            </button>
+          )}
         </div>
       </header>
 
@@ -628,6 +704,114 @@ function App() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* AI 생성기 */}
+        {activeTab === 'ai-generator' && (
+          <div className="ai-generator-section">
+            <h2>AI 문장 생성기</h2>
+            
+            {/* 생성 설정 */}
+            <div className="ai-controls">
+              <div className="ai-input-group">
+                <label>키워드:</label>
+                <input
+                  type="text"
+                  value={aiKeyword}
+                  onChange={(e) => setAiKeyword(e.target.value)}
+                  placeholder="예: 미니특공대, 북극곰, 송편..."
+                  className="ai-keyword-input"
+                />
+              </div>
+              
+              <div className="ai-input-group">
+                <label>생성 타입:</label>
+                <select 
+                  value={aiGenerationType} 
+                  onChange={(e) => setAiGenerationType(e.target.value)}
+                  className="ai-type-select"
+                >
+                  <option value="sample_phrase">Sample Phrase (대화 문장)</option>
+                  <option value="experience">경험 분석</option>
+                </select>
+              </div>
+              
+              <div className="ai-input-group">
+                <label>생성 개수:</label>
+                <select 
+                  value={aiCount} 
+                  onChange={(e) => setAiCount(parseInt(e.target.value))}
+                  className="ai-count-select"
+                >
+                  <option value={5}>5개</option>
+                  <option value={10}>10개</option>
+                  <option value={15}>15개</option>
+                  <option value={20}>20개</option>
+                </select>
+              </div>
+              
+              <button 
+                onClick={handleAIGenerate}
+                disabled={aiLoading || !aiKeyword.trim()}
+                className="ai-generate-btn"
+              >
+                {aiLoading ? '생성 중...' : '문장 생성하기'}
+              </button>
+            </div>
+
+            {/* 에러 표시 */}
+            {aiError && <p className="error">{aiError}</p>}
+
+            {/* 생성된 문장들 */}
+            {aiGeneratedSentences.length > 0 && (
+              <div className="ai-results">
+                <h3>생성된 문장들 ({aiGeneratedSentences.length}개)</h3>
+                <div className="ai-sentences-list">
+                  {aiGeneratedSentences.map((sentence, index) => (
+                    <div key={index} className="ai-sentence-item">
+                      <span className="sentence-number">{index + 1}.</span>
+                      <span className="sentence-text">{sentence}</span>
+                      <button 
+                        onClick={() => handleCopySentence(sentence)}
+                        className="copy-sentence-btn"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 생성 히스토리 */}
+            {aiHistory.length > 0 && (
+              <div className="ai-history">
+                <h3>최근 생성 히스토리</h3>
+                <div className="ai-history-list">
+                  {aiHistory.slice(0, 20).map((item, index) => (
+                    <div key={item.id} className="ai-history-item">
+                      <div className="history-header">
+                        <span className="history-keyword">{item.keyword}</span>
+                        <span className="history-type">
+                          {item.generation_type === 'sample_phrase' ? 'Sample Phrase' : '경험 분석'}
+                        </span>
+                        <span className="history-date">
+                          {new Date(item.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="history-text">{item.generated_text}</div>
+                      <button 
+                        onClick={() => handleCopySentence(item.generated_text)}
+                        className="copy-history-btn"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

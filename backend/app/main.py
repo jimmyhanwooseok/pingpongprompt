@@ -7,6 +7,20 @@ from typing import List, Optional
 from datetime import datetime
 import json
 import os
+import openai
+from openai import OpenAI
+from dotenv import load_dotenv
+
+# 환경변수 로드
+load_dotenv()
+
+# OpenAI 클라이언트 초기화
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
+    print("경고: OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
+    client = None
+else:
+    client = OpenAI(api_key=openai_api_key)
 
 app = FastAPI()
 
@@ -18,6 +32,11 @@ print(f"Frontend build path: {frontend_build_path}")
 print(f"Frontend build path exists: {os.path.exists(frontend_build_path)}")
 if os.path.exists(frontend_build_path):
     print(f"Contents: {os.listdir(frontend_build_path)}")
+    # index.html 파일 찾기
+    for root, dirs, files in os.walk(frontend_build_path):
+        for file in files:
+            if file == "index.html":
+                print(f"Found index.html at: {os.path.join(root, file)}")
 
 if os.path.exists(frontend_build_path):
     app.mount("/static", StaticFiles(directory=os.path.join(frontend_build_path, "static")), name="static")
@@ -79,6 +98,18 @@ class ContentInfoUpdate(BaseModel):
     content: str
     category: str
 
+# AI 생성 관련 모델
+class AIGenerationRequest(BaseModel):
+    keyword: str
+    generation_type: str  # "sample_phrase" 또는 "experience"
+    count: int = 10  # 생성할 문장 개수
+
+class AIGenerationResponse(BaseModel):
+    keyword: str
+    generation_type: str
+    generated_sentences: List[str]
+    created_at: str
+
 # 데이터베이스 초기화
 def init_db():
     conn = get_db()
@@ -105,6 +136,17 @@ def init_db():
             category TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # AI 생성 히스토리 테이블 생성
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS ai_generations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT NOT NULL,
+            generation_type TEXT NOT NULL,
+            generated_text TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     
@@ -441,6 +483,144 @@ async def search_content(검색어: Optional[str] = None, 카테고리: Optional
             "updated_at": content[5]
         }
         for content in contents
+    ]
+
+# AI 생성 관련 API 엔드포인트들
+@app.post("/ai/sample-phrase/")
+async def generate_sample_phrases(request: AIGenerationRequest):
+    if not client:
+        raise HTTPException(status_code=500, detail="OpenAI API 키가 설정되지 않았습니다.")
+    
+    try:
+        # Sample Phrase 생성 프롬프트
+        prompt = f"""
+키워드: {request.keyword}
+
+아동 상담용 대화 문장을 {request.count}개 생성해주세요.
+- 5-7세 아동이 말할 법한 자연스러운 문장
+- 흥미와 관심을 표현하는 문장
+- 상대방과의 상호작용을 유도하는 문장
+- 키워드와 관련된 구체적인 상황이나 경험 포함
+- 각 문장을 줄바꿈으로 구분해주세요
+
+예시:
+- "나는 볼트처럼 파란 로봇으로 변신해서 펀치 날리고 싶어!"
+- "나는 새미처럼 빨간 로봇 되어서 하늘 높이 날아다니고 싶어!"
+- "너도 루시처럼 분홍 로봇으로 변신해서 레이저 쏘고 싶어?"
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "당신은 아동 상담 전문가입니다. 5-7세 아동이 사용할 법한 자연스러운 대화 문장을 생성해주세요."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000,
+            temperature=0.8
+        )
+        
+        generated_text = response.choices[0].message.content
+        sentences = [s.strip() for s in generated_text.split('\n') if s.strip() and s.strip().startswith('-')]
+        sentences = [s[1:].strip() for s in sentences]  # '-' 제거
+        
+        # 데이터베이스에 저장
+        conn = get_db()
+        c = conn.cursor()
+        for sentence in sentences:
+            c.execute(
+                "INSERT INTO ai_generations (keyword, generation_type, generated_text) VALUES (?, ?, ?)",
+                (request.keyword, "sample_phrase", sentence)
+            )
+        conn.commit()
+        conn.close()
+        
+        return AIGenerationResponse(
+            keyword=request.keyword,
+            generation_type="sample_phrase",
+            generated_sentences=sentences,
+            created_at=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 생성 중 오류가 발생했습니다: {str(e)}")
+
+@app.post("/ai/experience/")
+async def generate_experience_analysis(request: AIGenerationRequest):
+    if not client:
+        raise HTTPException(status_code=500, detail="OpenAI API 키가 설정되지 않았습니다.")
+    
+    try:
+        # 경험 분석 생성 프롬프트
+        prompt = f"""
+키워드: {request.keyword}
+
+아동의 경험, 감정, 관심사를 분석한 문장을 {request.count}개 생성해주세요.
+- 아동이 해당 키워드에 대해 가질 수 있는 경험
+- 아동의 감정이나 반응
+- 아동의 관심사나 선호도
+- 구체적인 상황이나 활동 포함
+- 각 문장을 줄바꿈으로 구분해주세요
+
+예시:
+- "상대와 함께 상상하는 것을 즐김."
+- "너는 미니특공대를 좋아해."
+- "미니특공대가 합체해서 싸울 때 멋있어."
+- "미니특공대 보는데 볼트의 파란색 로봇이 멋있는 것 같아."
+- "미니특공대 인형을 가지고 있어."
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "당신은 아동 심리 전문가입니다. 아동의 경험과 감정을 분석한 문장을 생성해주세요."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        generated_text = response.choices[0].message.content
+        sentences = [s.strip() for s in generated_text.split('\n') if s.strip() and s.strip().startswith('-')]
+        sentences = [s[1:].strip() for s in sentences]  # '-' 제거
+        
+        # 데이터베이스에 저장
+        conn = get_db()
+        c = conn.cursor()
+        for sentence in sentences:
+            c.execute(
+                "INSERT INTO ai_generations (keyword, generation_type, generated_text) VALUES (?, ?, ?)",
+                (request.keyword, "experience", sentence)
+            )
+        conn.commit()
+        conn.close()
+        
+        return AIGenerationResponse(
+            keyword=request.keyword,
+            generation_type="experience",
+            generated_sentences=sentences,
+            created_at=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 생성 중 오류가 발생했습니다: {str(e)}")
+
+@app.get("/ai/history/")
+async def get_ai_generation_history():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM ai_generations ORDER BY created_at DESC LIMIT 100")
+    generations = c.fetchall()
+    conn.close()
+    
+    return [
+        {
+            "id": gen[0],
+            "keyword": gen[1],
+            "generation_type": gen[2],
+            "generated_text": gen[3],
+            "created_at": gen[4]
+        }
+        for gen in generations
     ]
 
 if __name__ == "__main__":
