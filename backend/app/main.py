@@ -83,6 +83,12 @@ class Template(BaseModel):
     fixed_content: str
     variables: dict
     tags: dict  # {"용도": "체크인", "회기": "1회기", "아동유형": "소극형"}
+    folder_id: Optional[int] = None
+
+class Folder(BaseModel):
+    name: str
+    description: Optional[str] = None
+    color: str = "#3b82f6"
 
 class TemplateUpdate(BaseModel):
     name: str
@@ -123,6 +129,16 @@ def init_db():
     conn = get_db()
     c = conn.cursor()
     c.execute('''
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT,
+            color TEXT DEFAULT '#3b82f6',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    c.execute('''
         CREATE TABLE IF NOT EXISTS templates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
@@ -130,9 +146,20 @@ def init_db():
             fixed_content TEXT NOT NULL,
             variables TEXT NOT NULL,
             tags TEXT NOT NULL,
+            folder_id INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (folder_id) REFERENCES folders (id)
         )
+    ''')
+    
+    # 기본 폴더 생성
+    c.execute('''
+        INSERT OR IGNORE INTO folders (name, description, color) VALUES 
+        ('기본', '기본 템플릿들', '#6b7280'),
+        ('상담', '상담 관련 템플릿', '#3b82f6'),
+        ('교육', '교육 관련 템플릿', '#10b981'),
+        ('놀이', '놀이 관련 템플릿', '#f59e0b')
     ''')
     
     # 콘텐츠 정보 테이블 생성
@@ -199,11 +226,81 @@ async def create_template(template: Template):
     finally:
         conn.close()
 
+# 폴더 관련 API
+@app.get("/folders/")
+async def get_folders():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM folders ORDER BY created_at ASC")
+    folders = c.fetchall()
+    conn.close()
+    return [
+        {
+            "id": folder[0],
+            "name": folder[1],
+            "description": folder[2],
+            "color": folder[3],
+            "created_at": folder[4]
+        }
+        for folder in folders
+    ]
+
+@app.post("/folders/")
+async def create_folder(folder: Folder):
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute(
+            "INSERT INTO folders (name, description, color) VALUES (?, ?, ?)",
+            (folder.name, folder.description, folder.color)
+        )
+        conn.commit()
+        folder_id = c.lastrowid
+        return {"id": folder_id, **folder.dict()}
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=400, detail="Folder name already exists")
+    finally:
+        conn.close()
+
+@app.put("/folders/{folder_id}")
+async def update_folder(folder_id: int, folder: Folder):
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute(
+            "UPDATE folders SET name = ?, description = ?, color = ? WHERE id = ?",
+            (folder.name, folder.description, folder.color, folder_id)
+        )
+        conn.commit()
+        return {"id": folder_id, **folder.dict()}
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=400, detail="Folder name already exists")
+    finally:
+        conn.close()
+
+@app.delete("/folders/{folder_id}")
+async def delete_folder(folder_id: int):
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        # 기본 폴더로 이동
+        c.execute("UPDATE templates SET folder_id = 1 WHERE folder_id = ?", (folder_id,))
+        c.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
+        conn.commit()
+        return {"message": "Folder deleted successfully"}
+    finally:
+        conn.close()
+
 @app.get("/templates/")
 async def get_templates():
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM templates ORDER BY created_at DESC")
+    c.execute("""
+        SELECT t.*, f.name as folder_name, f.color as folder_color 
+        FROM templates t 
+        LEFT JOIN folders f ON t.folder_id = f.id 
+        ORDER BY t.created_at DESC
+    """)
     templates = c.fetchall()
     conn.close()
     return [
@@ -214,8 +311,11 @@ async def get_templates():
             "fixed_content": template[3],
             "variables": safe_json_loads(template[4]),
             "tags": safe_json_loads(template[5]),
-            "created_at": template[6],
-            "updated_at": template[7]
+            "folder_id": template[6],
+            "folder_name": template[8],
+            "folder_color": template[9],
+            "created_at": template[7],
+            "updated_at": template[8] if len(template) > 8 else None
         }
         for template in templates
     ]
@@ -251,6 +351,15 @@ async def update_template(template_id: int, template: TemplateUpdate):
     conn.commit()
     conn.close()
     return {"id": template_id, **template.model_dump()}
+
+@app.put("/templates/{template_id}/move")
+async def move_template_to_folder(template_id: int, folder_id: int):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE templates SET folder_id = ? WHERE id = ?", (folder_id, template_id))
+    conn.commit()
+    conn.close()
+    return {"message": "Template moved successfully"}
 
 @app.delete("/templates/{template_id}")
 async def delete_template(template_id: int):
