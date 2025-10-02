@@ -118,9 +118,9 @@ function App() {
         console.log(`템플릿 "${template.name}" (folder_id: ${template.folder_id}) === 선택된 폴더 (${folder.id}):`, matches);
         return matches;
       } else {
-        const matches = !template.folder_id;
-        console.log(`템플릿 "${template.name}" (folder_id: ${template.folder_id}) 폴더 없음:`, matches);
-        return matches;
+        // "전체" 선택 시 모든 템플릿 표시
+        console.log(`템플릿 "${template.name}" (folder_id: ${template.folder_id}) 전체 표시`);
+        return true;
       }
     });
     
