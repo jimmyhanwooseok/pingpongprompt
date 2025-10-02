@@ -50,13 +50,11 @@ function App() {
   const [aiGeneratedSentences, setAiGeneratedSentences] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
-  const [aiHistory, setAiHistory] = useState([]);
 
   useEffect(() => {
     fetchTemplates();
     fetchAvailableTags();
     fetchContents();
-    fetchAIHistory();
   }, []);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || '';
@@ -406,15 +404,6 @@ function App() {
   };
 
   // AI 생성기 관련 함수들
-  const fetchAIHistory = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/ai/history/`);
-      const data = await response.json();
-      setAiHistory(data);
-    } catch (err) {
-      console.error('AI 히스토리 로딩 에러:', err);
-    }
-  };
 
   const handleAIGenerate = async () => {
     if (!aiKeyword.trim()) {
@@ -448,7 +437,6 @@ function App() {
 
       const data = await response.json();
       setAiGeneratedSentences(data.generated_sentences);
-      fetchAIHistory(); // 히스토리 새로고침
     } catch (err) {
       setAiError('AI 생성에 실패했습니다.');
       console.error(err);
@@ -459,6 +447,13 @@ function App() {
 
   const handleCopySentence = (sentence) => {
     navigator.clipboard.writeText(sentence);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleCopyAllSentences = () => {
+    const allText = aiGeneratedSentences.join('\n');
+    navigator.clipboard.writeText(allText);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -766,10 +761,18 @@ function App() {
             {/* 생성된 문장들 */}
             {aiGeneratedSentences.length > 0 && (
               <div className="ai-results">
-                <h3>생성된 문장들 ({aiGeneratedSentences.length}개)</h3>
-                <div className="ai-sentences-list">
+                <div className="ai-results-header">
+                  <h3>생성된 문장들 ({aiGeneratedSentences.length}개)</h3>
+                  <button 
+                    onClick={() => handleCopyAllSentences()}
+                    className="copy-all-btn"
+                  >
+                    📋 전체 복사
+                  </button>
+                </div>
+                <div className="ai-sentences-grid">
                   {aiGeneratedSentences.map((sentence, index) => (
-                    <div key={index} className="ai-sentence-item">
+                    <div key={index} className="ai-sentence-item-compact">
                       <span className="sentence-number">{index + 1}.</span>
                       <span className="sentence-text">{sentence}</span>
                       <button 
@@ -784,34 +787,6 @@ function App() {
               </div>
             )}
 
-            {/* 생성 히스토리 */}
-            {aiHistory.length > 0 && (
-              <div className="ai-history">
-                <h3>최근 생성 히스토리</h3>
-                <div className="ai-history-list">
-                  {aiHistory.slice(0, 20).map((item, index) => (
-                    <div key={item.id} className="ai-history-item">
-                      <div className="history-header">
-                        <span className="history-keyword">{item.keyword}</span>
-                        <span className="history-type">
-                          {item.generation_type === 'sample_phrase' ? 'Sample Phrase' : '경험 분석'}
-                        </span>
-                        <span className="history-date">
-                          {new Date(item.created_at).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="history-text">{item.generated_text}</div>
-                      <button 
-                        onClick={() => handleCopySentence(item.generated_text)}
-                        className="copy-history-btn"
-                      >
-                        📋
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 

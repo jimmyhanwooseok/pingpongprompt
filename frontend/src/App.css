@@ -934,31 +934,63 @@ main {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+.ai-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
 .ai-results h3 {
   text-align: left;
-  margin-bottom: 1.5rem;
+  margin: 0;
   color: #2d3748;
   font-size: 1.3rem;
   font-weight: 700;
 }
 
-.ai-sentences-list {
-  display: flex;
-  flex-direction: column;
+.copy-all-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-all-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.ai-sentences-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
 }
 
-.ai-sentence-item {
+@media (max-width: 768px) {
+  .ai-sentences-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ai-sentence-item-compact {
   display: flex;
-  align-items: center;
-  padding: 1rem;
+  align-items: flex-start;
+  padding: 0.75rem;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   transition: all 0.2s ease;
+  min-height: 60px;
 }
 
-.ai-sentence-item:hover {
+.ai-sentence-item-compact:hover {
   background: #f1f5f9;
   border-color: #3b82f6;
   transform: translateY(-1px);
@@ -968,27 +1000,30 @@ main {
 .sentence-number {
   font-weight: 600;
   color: #3b82f6;
-  margin-right: 0.75rem;
-  min-width: 2rem;
+  margin-right: 0.5rem;
+  min-width: 1.5rem;
+  font-size: 0.9rem;
 }
 
 .sentence-text {
   flex: 1;
   color: #2d3748;
-  line-height: 1.5;
-  font-size: 0.95rem;
+  line-height: 1.4;
+  font-size: 0.9rem;
+  margin-right: 0.5rem;
+  word-break: break-word;
 }
 
 .copy-sentence-btn {
   background: #3b82f6;
   color: white;
   border: none;
-  padding: 0.5rem;
+  padding: 0.4rem;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.8rem;
   transition: all 0.2s ease;
-  margin-left: 0.75rem;
+  flex-shrink: 0;
 }
 
 .copy-sentence-btn:hover {
