@@ -548,6 +548,8 @@ async def generate_sample_phrases(request: AIGenerationRequest):
         )
         
     except Exception as e:
+        print(f"Sample Phrase 생성 에러: {str(e)}")
+        print(f"에러 타입: {type(e)}")
         raise HTTPException(status_code=500, detail=f"AI 생성 중 오류가 발생했습니다: {str(e)}")
 
 @app.post("/ai/experience/")
@@ -608,6 +610,8 @@ async def generate_experience_analysis(request: AIGenerationRequest):
         )
         
     except Exception as e:
+        print(f"Experience 분석 생성 에러: {str(e)}")
+        print(f"에러 타입: {type(e)}")
         raise HTTPException(status_code=500, detail=f"AI 생성 중 오류가 발생했습니다: {str(e)}")
 
 @app.get("/ai/history/")
