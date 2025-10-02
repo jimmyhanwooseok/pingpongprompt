@@ -99,6 +99,7 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/folders/`);
       const data = await response.json();
+      console.log('폴더 목록 로드:', data);
       setFolders(data);
     } catch (err) {
       setError('폴더 목록을 불러오는데 실패했습니다.');
@@ -134,6 +135,8 @@ function App() {
       return;
     }
 
+    console.log('폴더 생성 데이터:', folderForm);
+
     try {
       const response = await fetch(`${API_BASE_URL}/folders/`, {
         method: 'POST',
@@ -144,6 +147,9 @@ function App() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('폴더 생성 결과:', result);
 
       setShowFolderManager(false);
       setFolderForm({ name: '', description: '', color: '#3b82f6' });
@@ -170,6 +176,8 @@ function App() {
       return;
     }
 
+    console.log('폴더 수정 데이터:', folderForm);
+
     try {
       const response = await fetch(`${API_BASE_URL}/folders/${editingFolder.id}`, {
         method: 'PUT',
@@ -180,6 +188,9 @@ function App() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('폴더 수정 결과:', result);
 
       setShowFolderManager(false);
       setEditingFolder(null);
@@ -789,7 +800,10 @@ function App() {
                     key={folder.id}
                     className={`folder-card ${selectedFolder?.id === folder.id ? 'selected' : ''}`}
                     onClick={() => handleFolderSelect(folder)}
-                    style={{ borderColor: folder.color }}
+                    style={{ 
+                      borderColor: folder.color,
+                      backgroundColor: selectedFolder?.id === folder.id ? `${folder.color}20` : '#f8fafc'
+                    }}
                   >
                     <div className="folder-icon" style={{ color: folder.color }}>📁</div>
                     <div className="folder-name">{folder.name}</div>
@@ -815,13 +829,6 @@ function App() {
               </div>
             </div>
 
-            {/* 선택된 폴더 표시 */}
-            {selectedFolder && (
-              <div className="selected-folder-info">
-                <h3>📁 {selectedFolder.name} 템플릿</h3>
-                <p>{selectedFolder.description}</p>
-              </div>
-            )}
 
             <div className="templates-grid">
               {templates.map(template => (
