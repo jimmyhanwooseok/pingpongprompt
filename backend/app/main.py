@@ -27,8 +27,8 @@ app = FastAPI()
 
 # 헬스체크 엔드포인트
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy", "message": "서버가 정상적으로 실행 중입니다"}
+def health_check():
+    return {"status": "ok"}
 
 # 정적 파일 서빙 설정 (프론트엔드 빌드 파일)
 frontend_build_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
