@@ -107,11 +107,24 @@ function App() {
   };
 
   const handleFolderSelect = (folder) => {
+    console.log('폴더 선택:', folder);
+    console.log('전체 템플릿 수:', allTemplates.length);
     setSelectedFolder(folder);
+    
     // 선택된 폴더의 템플릿만 필터링
-    const filteredTemplates = allTemplates.filter(template => 
-      folder ? template.folder_id === folder.id : !template.folder_id
-    );
+    const filteredTemplates = allTemplates.filter(template => {
+      if (folder) {
+        const matches = template.folder_id === folder.id;
+        console.log(`템플릿 "${template.name}" (folder_id: ${template.folder_id}) === 선택된 폴더 (${folder.id}):`, matches);
+        return matches;
+      } else {
+        const matches = !template.folder_id;
+        console.log(`템플릿 "${template.name}" (folder_id: ${template.folder_id}) 폴더 없음:`, matches);
+        return matches;
+      }
+    });
+    
+    console.log('필터링된 템플릿 수:', filteredTemplates.length);
     setTemplates(filteredTemplates);
   };
 
