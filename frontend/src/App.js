@@ -1062,11 +1062,11 @@ function App() {
 
               <div className="form-group">
                 <label>설명:</label>
-                <input
-                  type="text"
+                <textarea
                   value={templateForm.description}
                   onChange={(e) => handleTemplateFormChange('description', e.target.value)}
                   placeholder="템플릿에 대한 간단한 설명"
+                  rows={3}
                 />
               </div>
 
