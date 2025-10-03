@@ -756,8 +756,35 @@ async def generate_experience_analysis(request: AIGenerationRequest):
         )
         
         generated_text = response.choices[0].message.content
-        sentences = [s.strip() for s in generated_text.split('\n') if s.strip() and s.strip().startswith('-')]
-        sentences = [s[1:].strip() for s in sentences]  # '-' 제거
+        print(f"Experience Generated text: {generated_text}")  # 디버그용
+        
+        # 다양한 형식의 문장 파싱
+        sentences = []
+        for line in generated_text.split('\n'):
+            line = line.strip()
+            if line:
+                # 번호가 있는 경우 (1. 2. 3.)
+                if line[0].isdigit() and '. ' in line:
+                    sentence = line.split('. ', 1)[1].strip()
+                    # 따옴표 제거
+                    if sentence.startswith('"') and sentence.endswith('"'):
+                        sentence = sentence[1:-1]
+                    sentences.append(sentence)
+                # 대시가 있는 경우 (- 문장)
+                elif line.startswith('-'):
+                    sentence = line[1:].strip()
+                    # 따옴표 제거
+                    if sentence.startswith('"') and sentence.endswith('"'):
+                        sentence = sentence[1:-1]
+                    sentences.append(sentence)
+                # 그냥 문장인 경우 (키워드나 규칙이 아닌)
+                elif not line.startswith('키워드') and not line.startswith('규칙') and not line.startswith('생성할') and not line.startswith('예시'):
+                    # 따옴표 제거
+                    if line.startswith('"') and line.endswith('"'):
+                        line = line[1:-1]
+                    sentences.append(line)
+        
+        print(f"Experience Parsed sentences: {sentences}")  # 디버그용
         
         # 데이터베이스에 저장
         conn = get_db()
