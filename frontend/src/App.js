@@ -811,14 +811,6 @@ function App() {
                     </div>
                   )}
                   
-                  {/* 폴더 정보 표시 */}
-                  {template.folder_name && (
-                    <div className="template-folder">
-                      <span className="folder-badge" style={{ backgroundColor: template.folder_color }}>
-                        📁 {template.folder_name}
-                      </span>
-                    </div>
-                  )}
 
                   <div className="template-actions">
                     <select 
