@@ -728,6 +728,19 @@ function App() {
           <div className="templates-section">
             <h2>템플릿 목록</h2>
             
+            {/* 검색 기능 */}
+            <div className="search-section">
+              <div className="search-group">
+                <input
+                  type="text"
+                  value={selectedFilters.검색어}
+                  onChange={(e) => handleFilterChange('검색어', e.target.value)}
+                  placeholder="템플릿 이름 또는 설명으로 검색..."
+                  className="search-input"
+                />
+              </div>
+            </div>
+            
             {/* 폴더 그리드 */}
             <div className="folders-section">
               <div className="folders-header">
