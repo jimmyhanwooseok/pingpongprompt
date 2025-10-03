@@ -737,12 +737,22 @@ async def generate_experience_analysis(request: AIGenerationRequest):
 - 키워드를 자연스럽게 포함
 - 다양하고 창의적인 경험 생성
 
-예시들:
-분리수거: "나는 우리집에서 분리수거 담당이야", "분리수거 하다가 경비 아저씨한테 사탕 받은 적 있어"
-마인크래프트: "나는 마인크래프트 하는걸 좋아해", "네더에서 모험을 하다가 엔더드레곤을 만났어"
-보름달: "나는 보름달 크게 떠있는게 신기했어", "보름달을 보면 토끼가 생각나"
-동물원: "나는 동물원에 다녀온 적 있어", "동물원에서 원숭이보고 엄청 웃겼어"
-피카츄: "나는 포켓몬스터 좋아해", "피카츄 인형을 가지고 있어"
+키워드별 예시:
+분리수거: 
+- "나는 우리집에서 분리수거 담당이야"
+- "분리수거 하다가 경비 아저씨한테 사탕 받은 적 있어"
+마인크래프트: 
+- "나는 마인크래프트 하는걸 좋아해"
+- "네더에서 모험을 하다가 엔더드레곤을 만났어"
+보름달:
+- "나는 보름달 크게 떠있는게 신기했어"
+- "보름달을 보면 토끼가 생각나"
+동물원:
+- "나는 동물원에 다녀온 적 있어"
+- "동물원에서 원숭이보고 엄청 웃겼어"
+피카츄:
+- "나는 포켓몬스터 좋아해"
+- "피카츄 인형을 가지고 있어"
 """
 
         response = client.chat.completions.create(
@@ -779,10 +789,21 @@ async def generate_experience_analysis(request: AIGenerationRequest):
                     sentences.append(sentence)
                 # 그냥 문장인 경우 (키워드나 규칙이 아닌)
                 elif not line.startswith('키워드') and not line.startswith('규칙') and not line.startswith('생성할') and not line.startswith('예시'):
-                    # 따옴표 제거
-                    if line.startswith('"') and line.endswith('"'):
-                        line = line[1:-1]
-                    sentences.append(line)
+                    # 콜론으로 구분된 경우 (키워드: 문장) -> 문장 부분만 추출
+                    if ':' in line and not line.startswith('"'):
+                        # "키워드: 문장" 형식에서 문장 부분만 추출
+                        parts = line.split(':', 1)
+                        if len(parts) == 2:
+                            sentence = parts[1].strip()
+                            # 따옴표 제거
+                            if sentence.startswith('"') and sentence.endswith('"'):
+                                sentence = sentence[1:-1]
+                            sentences.append(sentence)
+                    else:
+                        # 따옴표 제거
+                        if line.startswith('"') and line.endswith('"'):
+                            line = line[1:-1]
+                        sentences.append(line)
         
         print(f"Experience Parsed sentences: {sentences}")  # 디버그용
         
