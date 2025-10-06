@@ -1108,7 +1108,7 @@ function App() {
                     value={editedPrompt}
                     onChange={(e) => setEditedPrompt(e.target.value)}
                     className="prompt-edit-textarea"
-                    rows={6}
+                    rows={12}
                     placeholder="프롬프트를 수정하세요..."
                   />
                 ) : (
