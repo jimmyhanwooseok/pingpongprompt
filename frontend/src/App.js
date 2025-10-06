@@ -614,7 +614,9 @@ function App() {
     try {
       const endpoint = aiGenerationType === 'sample_phrase' 
         ? '/ai/sample-phrase/' 
-        : '/ai/experience/';
+        : aiGenerationType === 'experience'
+        ? '/ai/experience/'
+        : '/ai/hint/';
       
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
@@ -668,7 +670,9 @@ function App() {
     try {
       const endpoint = inlineAIType === 'sample_phrase' 
         ? '/ai/sample-phrase/' 
-        : '/ai/experience/';
+        : inlineAIType === 'experience'
+        ? '/ai/experience/'
+        : '/ai/hint/';
       
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
@@ -990,6 +994,7 @@ function App() {
                 >
                   <option value="sample_phrase">Sample Phrase (대화 문장)</option>
                   <option value="experience">경험 분석</option>
+                  <option value="hint">키워드 힌트</option>
                 </select>
               </div>
               
@@ -1136,6 +1141,7 @@ function App() {
                       >
                         <option value="sample_phrase">대화 문장</option>
                         <option value="experience">경험 분석</option>
+                        <option value="hint">키워드 힌트</option>
                       </select>
                       <select 
                         value={inlineAICount} 
