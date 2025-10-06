@@ -16,11 +16,11 @@ load_dotenv()
 # OpenAI 클라이언트 초기화
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
-    print("경고: OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
-    print("AI 생성 기능을 사용하려면 환경변수를 설정해주세요.")
+    print("Warning: OPENAI_API_KEY environment variable not set.")
+    print("Please set environment variable to use AI generation features.")
     client = None
 else:
-    print(f"OpenAI API 키가 설정되었습니다: {openai_api_key[:10]}...")
+    print(f"OpenAI API key configured: {openai_api_key[:10]}...")
     client = OpenAI(api_key=openai_api_key)
 
 app = FastAPI()
@@ -827,6 +827,111 @@ async def generate_experience_analysis(request: AIGenerationRequest):
         
     except Exception as e:
         print(f"Experience 분석 생성 에러: {str(e)}")
+        print(f"에러 타입: {type(e)}")
+        raise HTTPException(status_code=500, detail=f"AI 생성 중 오류가 발생했습니다: {str(e)}")
+
+@app.post("/ai/hint/")
+async def generate_hint(request: AIGenerationRequest):
+    if not client:
+        raise HTTPException(status_code=500, detail="OpenAI API 키가 설정되지 않았습니다.")
+    
+    try:
+        # 키워드 힌트 생성 프롬프트
+        prompt = f"""
+키워드: {request.keyword}
+
+위 키워드에 대한 힌트를 {request.count}개 생성해주세요.
+힌트는 정답을 유추할 수 있도록 도움이 되는 단어나 구문이어야 합니다.
+
+규칙:
+- 1-3단어로 간결하게 작성
+- 키워드와 관련된 특징, 속성, 연상되는 것들
+- 5-7세 아동이 이해할 수 있는 수준
+- 다양한 관점에서의 힌트 제공
+- 키워드 자체는 포함하지 않기
+
+예시:
+키워드: "미니특공대"
+힌트: "로봇", "애니메이션", "친구들", "모험", "팀워크", "용기"
+
+키워드: "북극곰"
+힌트: "흰색", "추위", "얼음", "북극", "큰 동물", "겨울"
+
+키워드: "피카츄"
+힌트: "노란색", "전기", "포켓몬", "귀여운", "애니메이션", "게임"
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "당신은 5-7세 아동을 위한 교육 전문가입니다. 키워드에 대한 적절한 힌트를 생성해주세요."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
+        
+        generated_text = response.choices[0].message.content
+        print(f"Hint Generated text: {generated_text}")  # 디버그용
+        
+        # 힌트 파싱
+        hints = []
+        for line in generated_text.split('\n'):
+            line = line.strip()
+            if line:
+                # 번호가 있는 경우 (1. 2. 3.)
+                if line[0].isdigit() and '. ' in line:
+                    hint = line.split('. ', 1)[1].strip()
+                    # 따옴표 제거
+                    if hint.startswith('"') and hint.endswith('"'):
+                        hint = hint[1:-1]
+                    hints.append(hint)
+                # 대시가 있는 경우 (- 힌트)
+                elif line.startswith('-'):
+                    hint = line[1:].strip()
+                    # 따옴표 제거
+                    if hint.startswith('"') and hint.endswith('"'):
+                        hint = hint[1:-1]
+                    hints.append(hint)
+                # 그냥 힌트인 경우 (키워드나 규칙이 아닌)
+                elif not line.startswith('키워드') and not line.startswith('규칙') and not line.startswith('예시'):
+                    # 콜론으로 구분된 경우 (키워드: 힌트) -> 힌트 부분만 추출
+                    if ':' in line and not line.startswith('"'):
+                        parts = line.split(':', 1)
+                        if len(parts) == 2:
+                            hint = parts[1].strip()
+                            # 따옴표 제거
+                            if hint.startswith('"') and hint.endswith('"'):
+                                hint = hint[1:-1]
+                            hints.append(hint)
+                    else:
+                        # 따옴표 제거
+                        if line.startswith('"') and line.endswith('"'):
+                            line = line[1:-1]
+                        hints.append(line)
+        
+        print(f"Hint Parsed hints: {hints}")  # 디버그용
+        
+        # 데이터베이스에 저장
+        conn = get_db()
+        c = conn.cursor()
+        for hint in hints:
+            c.execute(
+                "INSERT INTO ai_generations (keyword, generation_type, generated_text) VALUES (?, ?, ?)",
+                (request.keyword, "hint", hint)
+            )
+        conn.commit()
+        conn.close()
+        
+        return AIGenerationResponse(
+            keyword=request.keyword,
+            generation_type="hint",
+            generated_sentences=hints,
+            created_at=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        print(f"Hint 생성 에러: {str(e)}")
         print(f"에러 타입: {type(e)}")
         raise HTTPException(status_code=500, detail=f"AI 생성 중 오류가 발생했습니다: {str(e)}")
 
