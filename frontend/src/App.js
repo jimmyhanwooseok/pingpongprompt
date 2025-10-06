@@ -1099,8 +1099,14 @@ function App() {
                   </button>
                   <button 
                     onClick={() => {
+                      if (isEditingPrompt) {
+                        // 완료 버튼: 수정된 프롬프트를 finalPrompt로 업데이트
+                        setFinalPrompt(editedPrompt);
+                      } else {
+                        // 수정 버튼: 현재 finalPrompt를 editedPrompt로 복사
+                        setEditedPrompt(finalPrompt);
+                      }
                       setIsEditingPrompt(!isEditingPrompt);
-                      setEditedPrompt(finalPrompt);
                     }}
                     className="edit-button"
                   >
