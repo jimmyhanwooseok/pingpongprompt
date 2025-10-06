@@ -63,6 +63,18 @@ function App() {
   });
   const [allTemplates, setAllTemplates] = useState([]); // 모든 템플릿 저장
 
+  // 프롬프트 수정 관련 상태
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [editedPrompt, setEditedPrompt] = useState('');
+
+  // 인라인 AI 생성 관련 상태
+  const [inlineKeyword, setInlineKeyword] = useState('');
+  const [inlineAIType, setInlineAIType] = useState('sample_phrase');
+  const [inlineAICount, setInlineAICount] = useState(10);
+  const [inlineAIResults, setInlineAIResults] = useState([]);
+  const [inlineAILoading, setInlineAILoading] = useState(false);
+  const [inlineAIError, setInlineAIError] = useState(null);
+
   useEffect(() => {
     fetchTemplates();
     fetchAvailableTags();
@@ -643,6 +655,55 @@ function App() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  // 인라인 AI 생성 함수
+  const handleInlineAIGenerate = async () => {
+    if (!inlineKeyword.trim()) {
+      setInlineAIError('키워드를 입력해주세요.');
+      return;
+    }
+
+    setInlineAILoading(true);
+    setInlineAIError(null);
+
+    try {
+      const endpoint = inlineAIType === 'sample_phrase' 
+        ? '/ai/sample-phrase/' 
+        : '/ai/experience/';
+      
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          keyword: inlineKeyword,
+          generation_type: inlineAIType,
+          count: inlineAICount
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setInlineAIResults(data.generated_sentences);
+    } catch (err) {
+      setInlineAIError('AI 생성에 실패했습니다.');
+      console.error(err);
+    } finally {
+      setInlineAILoading(false);
+    }
+  };
+
+  // AI 생성 결과를 프롬프트에 붙여넣기
+  const handlePasteAIResults = () => {
+    if (inlineAIResults.length > 0) {
+      const aiText = inlineAIResults.join('\n');
+      setEditedPrompt(editedPrompt + '\n\n' + aiText);
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -1024,13 +1085,129 @@ function App() {
             {finalPrompt && (
               <div className="prompt-result">
                 <h3>생성된 프롬프트</h3>
-                <button 
-                  onClick={handleCopy}
-                  className={`copy-button ${copied ? 'copied' : ''}`}
-                >
-                  {copied ? '복사됨!' : '복사'}
-                </button>
-                <pre>{highlightBrackets(finalPrompt)}</pre>
+                <div className="prompt-actions">
+                  <button 
+                    onClick={handleCopy}
+                    className={`copy-button ${copied ? 'copied' : ''}`}
+                  >
+                    {copied ? '복사됨!' : '복사'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsEditingPrompt(!isEditingPrompt);
+                      setEditedPrompt(finalPrompt);
+                    }}
+                    className="edit-button"
+                  >
+                    {isEditingPrompt ? '완료' : '수정'}
+                  </button>
+                </div>
+                
+                {isEditingPrompt ? (
+                  <textarea
+                    value={editedPrompt}
+                    onChange={(e) => setEditedPrompt(e.target.value)}
+                    className="prompt-edit-textarea"
+                    rows={6}
+                    placeholder="프롬프트를 수정하세요..."
+                  />
+                ) : (
+                  <pre>{highlightBrackets(finalPrompt)}</pre>
+                )}
+                
+                {/* 🤖 AI 문장 생성 섹션 */}
+                <div className="inline-ai-section">
+                  <h4>🤖 AI 문장 생성</h4>
+                  
+                  {/* AI 생성 컨트롤 */}
+                  <div className="inline-ai-controls">
+                    <div className="ai-input-row">
+                      <input
+                        type="text"
+                        value={inlineKeyword}
+                        onChange={(e) => setInlineKeyword(e.target.value)}
+                        placeholder="키워드 입력 (예: 미니특공대, 북극곰...)"
+                        className="inline-keyword-input"
+                      />
+                      <select 
+                        value={inlineAIType} 
+                        onChange={(e) => setInlineAIType(e.target.value)}
+                        className="inline-type-select"
+                      >
+                        <option value="sample_phrase">대화 문장</option>
+                        <option value="experience">경험 분석</option>
+                      </select>
+                      <select 
+                        value={inlineAICount} 
+                        onChange={(e) => setInlineAICount(parseInt(e.target.value))}
+                        className="inline-count-select"
+                      >
+                        <option value={5}>5개</option>
+                        <option value={10}>10개</option>
+                        <option value={15}>15개</option>
+                        <option value={20}>20개</option>
+                      </select>
+                      <button 
+                        onClick={handleInlineAIGenerate}
+                        disabled={inlineAILoading || !inlineKeyword.trim()}
+                        className="inline-ai-btn"
+                      >
+                        {inlineAILoading ? '생성 중...' : 'AI 생성'}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* 에러 표시 */}
+                  {inlineAIError && <p className="error">{inlineAIError}</p>}
+                  
+                  {/* AI 생성 결과 */}
+                  {inlineAIResults.length > 0 && (
+                    <div className="inline-ai-results">
+                      <div className="results-header">
+                        <h5>생성된 문장들 ({inlineAIResults.length}개)</h5>
+                        <div className="results-actions">
+                          <button 
+                            onClick={() => {
+                              const allText = inlineAIResults.join('\n');
+                              navigator.clipboard.writeText(allText);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 1500);
+                            }}
+                            className="copy-all-btn"
+                          >
+                            📋 전체 복사
+                          </button>
+                          {isEditingPrompt && (
+                            <button 
+                              onClick={handlePasteAIResults}
+                              className="paste-ai-btn"
+                            >
+                              📝 프롬프트에 붙여넣기
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="inline-sentences-list">
+                        {inlineAIResults.map((sentence, index) => (
+                          <div key={index} className="inline-sentence-item">
+                            <span className="sentence-number">{index + 1}.</span>
+                            <span className="sentence-text">{sentence}</span>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(sentence);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 1500);
+                              }}
+                              className="copy-sentence-btn"
+                            >
+                              📋
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

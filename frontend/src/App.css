@@ -1399,3 +1399,245 @@ main {
     margin-left: 0;
   }
 }
+
+/* 프롬프트 수정 관련 스타일 */
+.prompt-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.edit-button {
+  padding: 8px 16px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.edit-button:hover {
+  background: #059669;
+}
+
+.prompt-edit-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 120px;
+  background: #f9f9f9;
+}
+
+.prompt-edit-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  background: white;
+}
+
+/* 인라인 AI 생성 관련 스타일 */
+.inline-ai-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.inline-ai-section h4 {
+  margin: 0 0 15px 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.inline-ai-controls {
+  margin-bottom: 20px;
+}
+
+.ai-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inline-keyword-input {
+  flex: 2;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.inline-keyword-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.inline-type-select,
+.inline-count-select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  min-width: 100px;
+}
+
+.inline-ai-btn {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.inline-ai-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.inline-ai-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.inline-ai-results {
+  margin-top: 20px;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.results-header h5 {
+  margin: 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.results-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.copy-all-btn,
+.paste-ai-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.copy-all-btn {
+  background: #10b981;
+  color: white;
+}
+
+.copy-all-btn:hover {
+  background: #059669;
+}
+
+.paste-ai-btn {
+  background: #f59e0b;
+  color: white;
+}
+
+.paste-ai-btn:hover {
+  background: #d97706;
+}
+
+.inline-sentences-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+}
+
+.inline-sentence-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 10px;
+}
+
+.inline-sentence-item:last-child {
+  border-bottom: none;
+}
+
+.sentence-number {
+  color: #6b7280;
+  font-size: 12px;
+  min-width: 20px;
+  font-weight: 500;
+}
+
+.sentence-text {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #374151;
+}
+
+.copy-sentence-btn {
+  padding: 4px 8px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.copy-sentence-btn:hover {
+  background: #e5e7eb;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .ai-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .inline-keyword-input,
+  .inline-type-select,
+  .inline-count-select {
+    min-width: auto;
+  }
+  
+  .results-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .results-actions {
+    justify-content: center;
+  }
+}
