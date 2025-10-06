@@ -826,22 +826,32 @@ async def generate_hint(request: AIGenerationRequest):
 [REQUIREMENTS]
 - 정답 자체는 절대 포함하지 않기
 - 5-7세 아동이 이해할 수 있는 수준
-- 점진적으로 쉬운 것부터 어려운 것까지 (색깔/모양 → 특징 → 활동/경험)
-- 실제 경험이나 상황을 묘사하는 문장
-- 각 힌트는 10-20단어 이내
-- 키워드의 성격에 맞게 자연스럽게 시작 (장소는 "여기서는", 동물은 "이 동물은", 물건은 "이것은")
+- 간단하고 직접적으로 설명
+- 핵심 특징이나 정보를 짧게 표현
+- 각 힌트는 5-15단어 이내
 
 [EXAMPLES]
-예시:
-- "여기서는 뛰고 달릴 수 있어"
-- "미끄럼틀을 타고 슝 내려올 수 있어"
-- "친구들이랑 같이 모여서 놀 수도 있어"
-- "이 동물은 흰색이야"
-- "추운 곳에서 살아"
-- "얼음 위에서 걸어다녀"
-- "이것은 노란색이야"
-- "전기를 쓸 수 있어"
-- "포켓몬 중에서 제일 유명해"
+키워드별 예시:
+
+축구:
+- "체육시간에 하는거야"
+- "공으로 하는거야! 11명이서해"
+- "골을 넣는 게 목표야"
+
+해리포터:
+- "영화로도 나오고 책으로도 나왔어"
+- "마법 이야기야"
+- "마법 학교에 다녀"
+
+코난:
+- "추리하는 애니메이션이야"
+- "주인공이 어린애로 변했어"
+- "범인을 찾는 이야기야"
+
+분리수거:
+- "쓰레기를 나눠서 버리는거야"
+- "환경을 지키기 위해서 꼭 해야돼"
+- "색깔별로 나눠서 버려"
 """
 
         response = client.chat.completions.create(
@@ -859,39 +869,37 @@ async def generate_hint(request: AIGenerationRequest):
         
         # 힌트 파싱
         hints = []
-        for line in generated_text.split('\n'):
+        lines = generated_text.split('\n')
+        
+        for line in lines:
             line = line.strip()
-            if line:
-                # 번호가 있는 경우 (1. 2. 3.)
-                if line[0].isdigit() and '. ' in line:
-                    hint = line.split('. ', 1)[1].strip()
-                    # 따옴표 제거
-                    if hint.startswith('"') and hint.endswith('"'):
-                        hint = hint[1:-1]
+            if not line:
+                continue
+                
+            # Skip lines starting with keywords, rules, or examples
+            if any(line.startswith(prefix) for prefix in ['키워드:', '규칙:', '예시:', '키워드', '규칙', '예시', '정답:']):
+                continue
+                
+            # Handle numbered lists (1. 2. 3.)
+            if line[0].isdigit() and '. ' in line:
+                hint = line.split('. ', 1)[1].strip()
+                hints.append(hint)
+            # Handle dashed lists (- hint)
+            elif line.startswith('-'):
+                hint = line[1:].strip()
+                hints.append(hint)
+            # Handle colon-separated (Keyword: Hint)
+            elif ':' in line and not line.startswith('"'):
+                parts = line.split(':', 1)
+                if len(parts) == 2:
+                    hint = parts[1].strip()
                     hints.append(hint)
-                # 대시가 있는 경우 (- 힌트)
-                elif line.startswith('-'):
-                    hint = line[1:].strip()
-                    # 따옴표 제거
-                    if hint.startswith('"') and hint.endswith('"'):
-                        hint = hint[1:-1]
-                    hints.append(hint)
-                # 그냥 힌트인 경우 (키워드나 규칙이 아닌)
-                elif not line.startswith('키워드') and not line.startswith('규칙') and not line.startswith('예시'):
-                    # 콜론으로 구분된 경우 (키워드: 힌트) -> 힌트 부분만 추출
-                    if ':' in line and not line.startswith('"'):
-                        parts = line.split(':', 1)
-                        if len(parts) == 2:
-                            hint = parts[1].strip()
-                            # 따옴표 제거
-                            if hint.startswith('"') and hint.endswith('"'):
-                                hint = hint[1:-1]
-                            hints.append(hint)
-                    else:
-                        # 따옴표 제거
-                        if line.startswith('"') and line.endswith('"'):
-                            line = line[1:-1]
-                        hints.append(line)
+            # Handle plain lines (short words)
+            elif len(line) < 20 and not line.startswith('"'):
+                hints.append(line)
+        
+        # Remove quotes from all hints
+        hints = [hint.strip('"') for hint in hints if hint.strip()]
         
         print(f"Hint Parsed hints: {hints}")  # 디버그용
         
