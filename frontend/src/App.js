@@ -53,6 +53,25 @@ function App() {
 
   // 폴더 관련 상태
   const [folders, setFolders] = useState([]);
+  
+  // 템플릿 설명 펼쳐보기 상태
+  const [expandedTemplates, setExpandedTemplates] = useState({});
+  
+  // 텍스트 자르기 함수
+  const truncateText = (text, maxLines = 3) => {
+    if (!text) return '';
+    const lines = text.split('\n');
+    if (lines.length <= maxLines) return text;
+    return lines.slice(0, maxLines).join('\n') + '...';
+  };
+  
+  // 템플릿 설명 펼치기/접기 토글
+  const toggleTemplateExpanded = (templateId) => {
+    setExpandedTemplates(prev => ({
+      ...prev,
+      [templateId]: !prev[templateId]
+    }));
+  };
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [showFolderManager, setShowFolderManager] = useState(false);
   const [editingFolder, setEditingFolder] = useState(null);
@@ -865,7 +884,25 @@ function App() {
                   onClick={() => handleTemplateSelect(template)}
                 >
                   <h3>{template.name}</h3>
-                  <p>{template.description}</p>
+                  <div className="template-description">
+                    <p>
+                      {expandedTemplates[template.id] 
+                        ? template.description 
+                        : truncateText(template.description)
+                      }
+                    </p>
+                    {template.description && template.description.split('\n').length > 3 && (
+                      <button 
+                        className="expand-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleTemplateExpanded(template.id);
+                        }}
+                      >
+                        {expandedTemplates[template.id] ? '접기 ▲' : '펼쳐보기 ▼'}
+                      </button>
+                    )}
+                  </div>
                   
                   {/* 태그 표시 */}
                   {template.tags && Object.values(template.tags).some(tag => tag) && (
