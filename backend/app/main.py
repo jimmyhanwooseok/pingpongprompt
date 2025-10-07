@@ -666,12 +666,9 @@ async def generate_sample_phrases(request: AIGenerationRequest):
                     if sentence.startswith('"') and sentence.endswith('"'):
                         sentence = sentence[1:-1]
                     sentences.append(sentence)
-                # 대시가 있는 경우 (- 문장)
+                # 대시가 있는 경우 (- "문장")
                 elif line.startswith('-'):
-                    sentence = line[1:].strip()
-                    # 따옴표 제거
-                    if sentence.startswith('"') and sentence.endswith('"'):
-                        sentence = sentence[1:-1]
+                    sentence = line.strip()  # 대시와 따옴표 그대로 유지
                     sentences.append(sentence)
                 # 그냥 문장인 경우 (키워드나 규칙이 아닌)
                 elif not line.startswith('키워드') and not line.startswith('규칙') and not line.startswith('대화') and not line.startswith('예시'):
@@ -914,9 +911,9 @@ async def generate_hint(request: AIGenerationRequest):
             if line[0].isdigit() and '. ' in line:
                 hint = line.split('. ', 1)[1].strip()
                 hints.append(hint)
-            # Handle dashed lists (- hint)
+            # Handle dashed lists (- "hint")
             elif line.startswith('-'):
-                hint = line[1:].strip()
+                hint = line.strip()  # 대시와 따옴표 그대로 유지
                 hints.append(hint)
             # Handle colon-separated (Keyword: Hint)
             elif ':' in line and not line.startswith('"'):
@@ -928,8 +925,8 @@ async def generate_hint(request: AIGenerationRequest):
             elif len(line) < 20 and not line.startswith('"'):
                 hints.append(line)
         
-        # Remove quotes from all hints
-        hints = [hint.strip('"') for hint in hints if hint.strip()]
+        # Keep quotes in hints (don't remove them)
+        # hints = [hint.strip('"') for hint in hints if hint.strip()]
         
         print(f"Hint Parsed hints: {hints}")  # 디버그용
         
