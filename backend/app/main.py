@@ -629,6 +629,10 @@ async def generate_sample_phrases(request: AIGenerationRequest):
 - 키워드를 자연스럽게 문장에 포함
 - 다양한 대화 패턴 사용 (경험 공유, 질문하기, 감정 표현 등)
 
+[OUTPUT FORMAT]
+각 문장을 반드시 다음 형식으로 출력해줘:
+- "문장 내용"
+
 [EXAMPLES]
 예시:
 - "스켈레톤은 화살 쏘는 몬스터라서 무서웠어!"
@@ -851,6 +855,10 @@ async def generate_hint(request: AIGenerationRequest):
 - 핵심 특징이나 정보를 짧게 표현
 - 각 힌트는 5-15단어 이내
 - 반말을 사용해.
+
+[OUTPUT FORMAT]
+각 힌트를 반드시 다음 형식으로 출력해줘:
+- "힌트 내용"
 
 [EXAMPLES]
 키워드별 예시:
