@@ -514,11 +514,11 @@ function App() {
   const highlightBrackets = (text) => {
     if (!text) return '';
     
-    const parts = text.split(/(\[[^\]]+\])/g);
+    const parts = text.split(/(<[^>]+>)/g);
     
     return parts.map((part, index) => {
-      if (part.match(/\[[^\]]+\]/)) {
-        // [변수] 부분 - 빨간색
+      if (part.match(/<[^>]+>/)) {
+        // <변수> 부분 - 빨간색
         return <span key={index} style={{color: 'red', fontWeight: 'bold'}}>{part}</span>;
       } else {
         // 나머지 텍스트 - 검정색 (기본)
