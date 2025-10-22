@@ -101,6 +101,10 @@ class TemplateGenerate(BaseModel):
     template_id: int
     variables: dict
 
+class FolderBatchGenerate(BaseModel):
+    folder_id: int
+    variables: dict
+
 # 콘텐츠 정보 모델
 class ContentInfo(BaseModel):
     title: str
@@ -215,8 +219,8 @@ async def create_template(template: Template):
     c = conn.cursor()
     try:
         c.execute(
-            "INSERT INTO templates (name, description, fixed_content, variables, tags) VALUES (?, ?, ?, ?, ?)",
-            (template.name, template.description, template.fixed_content, json.dumps(template.variables), json.dumps(template.tags))
+            "INSERT INTO templates (name, description, fixed_content, variables, tags, folder_id) VALUES (?, ?, ?, ?, ?, ?)",
+            (template.name, template.description, template.fixed_content, json.dumps(template.variables), json.dumps(template.tags), template.folder_id)
         )
         conn.commit()
         template_id = c.lastrowid
@@ -482,6 +486,105 @@ async def generate_from_template(data: TemplateGenerate):
         "final_prompt": final_prompt,
         "variables_used": data.variables,
         "found_variables": found_variables
+    }
+
+# 폴더별 공통 변수 추출 API
+@app.get("/folders/{folder_id}/common-variables/")
+async def get_folder_common_variables(folder_id: int):
+    conn = get_db()
+    c = conn.cursor()
+    
+    # 폴더 내 모든 템플릿 가져오기
+    c.execute("SELECT id, name, fixed_content FROM templates WHERE folder_id = ?", (folder_id,))
+    templates = c.fetchall()
+    conn.close()
+    
+    if not templates:
+        return {"common_variables": [], "template_count": 0, "templates": []}
+    
+    # 모든 템플릿에서 변수 추출
+    import re
+    variable_pattern = r'\{\{\{([^}]+)\}\}\}'
+    all_variables = set()
+    template_variables = {}
+    
+    for template in templates:
+        template_id, name, content = template
+        variables = re.findall(variable_pattern, content)
+        template_variables[template_id] = {
+            "name": name,
+            "variables": variables
+        }
+        all_variables.update(variables)
+    
+    # 공통 변수 찾기 (2개 이상 템플릿에서 사용되는 변수)
+    common_variables = []
+    for var in all_variables:
+        count = sum(1 for tv in template_variables.values() if var in tv["variables"])
+        if count >= 2:  # 2개 이상 템플릿에서 사용
+            common_variables.append({
+                "name": var,
+                "usage_count": count,
+                "usage_percentage": round((count / len(templates)) * 100, 1)
+            })
+    
+    # 사용 빈도순으로 정렬
+    common_variables.sort(key=lambda x: x["usage_count"], reverse=True)
+    
+    return {
+        "common_variables": common_variables,
+        "all_variables": list(all_variables),
+        "template_count": len(templates),
+        "templates": [
+            {
+                "id": tid,
+                "name": data["name"],
+                "variables": data["variables"]
+            }
+            for tid, data in template_variables.items()
+        ]
+    }
+
+# 폴더별 일괄 생성 API
+@app.post("/folders/{folder_id}/batch-generate/")
+async def batch_generate_from_folder(folder_id: int, data: FolderBatchGenerate):
+    conn = get_db()
+    c = conn.cursor()
+    
+    # 폴더 내 모든 템플릿 가져오기
+    c.execute("SELECT id, name, fixed_content FROM templates WHERE folder_id = ?", (folder_id,))
+    templates = c.fetchall()
+    conn.close()
+    
+    if not templates:
+        raise HTTPException(status_code=404, detail="No templates found in this folder")
+    
+    # 각 템플릿에 대해 프롬프트 생성
+    import re
+    variable_pattern = r'\{\{\{([^}]+)\}\}\}'
+    results = []
+    
+    for template in templates:
+        template_id, name, content = template
+        found_variables = re.findall(variable_pattern, content)
+        
+        # 변수 치환
+        final_prompt = content
+        for key, value in data.variables.items():
+            final_prompt = final_prompt.replace("{{{" + key + "}}}", str(value))
+        
+        results.append({
+            "template_id": template_id,
+            "template_name": name,
+            "final_prompt": final_prompt,
+            "variables_used": {k: v for k, v in data.variables.items() if k in found_variables},
+            "found_variables": found_variables
+        })
+    
+    return {
+        "folder_id": folder_id,
+        "generated_count": len(results),
+        "results": results
     }
 
 # 콘텐츠 정보 관련 API 엔드포인트들

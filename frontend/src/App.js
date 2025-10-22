@@ -94,6 +94,15 @@ function App() {
   const [inlineAILoading, setInlineAILoading] = useState(false);
   const [inlineAIError, setInlineAIError] = useState(null);
 
+  // 폴더별 일괄 생성 관련 상태
+  const [showBatchGenerateModal, setShowBatchGenerateModal] = useState(false);
+  const [batchGenerateFolder, setBatchGenerateFolder] = useState(null);
+  const [commonVariables, setCommonVariables] = useState([]);
+  const [batchVariables, setBatchVariables] = useState({});
+  const [batchResults, setBatchResults] = useState([]);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchError, setBatchError] = useState(null);
+
   useEffect(() => {
     fetchTemplates();
     fetchAvailableTags();
@@ -727,6 +736,76 @@ function App() {
     }
   };
 
+  // 폴더별 일괄 생성 관련 함수들
+  const handleBatchGenerate = async (folder) => {
+    try {
+      // 폴더의 공통 변수 가져오기
+      const response = await fetch(`${API_BASE_URL}/folders/${folder.id}/common-variables/`);
+      const data = await response.json();
+      
+      setBatchGenerateFolder(folder);
+      setCommonVariables(data.common_variables);
+      setBatchVariables({});
+      setBatchResults([]);
+      setBatchError(null);
+      setShowBatchGenerateModal(true);
+    } catch (err) {
+      setBatchError('공통 변수를 가져오는데 실패했습니다.');
+      console.error(err);
+    }
+  };
+
+  const handleBatchVariableChange = (variableName, value) => {
+    setBatchVariables(prev => ({
+      ...prev,
+      [variableName]: value
+    }));
+  };
+
+  const handleExecuteBatchGenerate = async () => {
+    if (!batchGenerateFolder) return;
+    
+    setBatchLoading(true);
+    setBatchError(null);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/folders/${batchGenerateFolder.id}/batch-generate/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          folder_id: batchGenerateFolder.id,
+          variables: batchVariables
+        }),
+      });
+      
+      const data = await response.json();
+      setBatchResults(data.results);
+    } catch (err) {
+      setBatchError('일괄 생성에 실패했습니다.');
+      console.error(err);
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const handleCopyBatchResult = (result) => {
+    navigator.clipboard.writeText(result.final_prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleEditBatchResult = (result, newPrompt) => {
+    setBatchResults(prev => 
+      prev.map(r => 
+        r.template_id === result.template_id 
+          ? { ...r, final_prompt: newPrompt }
+          : r
+      )
+    );
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -858,14 +937,23 @@ function App() {
                     </div>
                     <div className="folder-actions">
                       <button 
+                        onClick={(e) => { e.stopPropagation(); handleBatchGenerate(folder); }}
+                        className="folder-batch-btn"
+                        title="일괄 생성"
+                      >
+                        🚀
+                      </button>
+                      <button 
                         onClick={(e) => { e.stopPropagation(); handleEditFolder(folder); }}
                         className="folder-edit-btn"
+                        title="편집"
                       >
                         ✏️
                       </button>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
                         className="folder-delete-btn"
+                        title="삭제"
                       >
                         🗑️
                       </button>
@@ -1461,6 +1549,94 @@ function App() {
                   <button onClick={handleContentSave} className="save-btn">저장</button>
                   <button onClick={() => setShowContentManager(false)} className="cancel-btn">취소</button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 폴더별 일괄 생성 모달 */}
+        {showBatchGenerateModal && batchGenerateFolder && (
+          <div className="modal-overlay">
+            <div className="modal batch-generate-modal">
+              <div className="modal-header">
+                <h3>🚀 {batchGenerateFolder.name} 폴더 일괄 생성</h3>
+                <button 
+                  onClick={() => setShowBatchGenerateModal(false)}
+                  className="close-btn"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="modal-content">
+                {batchError && <p className="error">{batchError}</p>}
+                
+                {commonVariables.length > 0 ? (
+                  <>
+                    <div className="batch-variables-section">
+                      <h4>📝 공통 변수 입력</h4>
+                      <p className="batch-info">
+                        이 폴더의 {commonVariables.length}개 공통 변수를 입력하면 모든 템플릿이 일괄 생성됩니다.
+                      </p>
+                      
+                      <div className="batch-variables-grid">
+                        {commonVariables.map((variable, index) => (
+                          <div key={index} className="batch-variable-input">
+                            <label>
+                              {variable.name}
+                              <span className="usage-info">
+                                ({variable.usage_count}개 템플릿에서 사용, {variable.usage_percentage}%)
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={batchVariables[variable.name] || ''}
+                              onChange={(e) => handleBatchVariableChange(variable.name, e.target.value)}
+                              placeholder={`${variable.name}을(를) 입력하세요`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <button 
+                        onClick={handleExecuteBatchGenerate}
+                        disabled={batchLoading || Object.keys(batchVariables).length === 0}
+                        className="batch-generate-btn"
+                      >
+                        {batchLoading ? '생성 중...' : '🚀 일괄 생성하기'}
+                      </button>
+                    </div>
+                    
+                    {batchResults.length > 0 && (
+                      <div className="batch-results-section">
+                        <h4>✅ 생성된 프롬프트들 ({batchResults.length}개)</h4>
+                        <div className="batch-results-grid">
+                          {batchResults.map((result, index) => (
+                            <div key={index} className="batch-result-item">
+                              <div className="result-header">
+                                <h5>{result.template_name}</h5>
+                                <button 
+                                  onClick={() => handleCopyBatchResult(result)}
+                                  className="copy-result-btn"
+                                >
+                                  📋 복사
+                                </button>
+                              </div>
+                              <div className="result-content">
+                                <pre>{result.final_prompt}</pre>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="no-common-variables">
+                    <p>이 폴더에는 공통 변수가 없습니다.</p>
+                    <p>각 템플릿을 개별적으로 사용해주세요.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

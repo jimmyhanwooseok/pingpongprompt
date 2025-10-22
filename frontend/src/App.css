@@ -1641,6 +1641,198 @@ main {
   background: #e5e7eb;
 }
 
+/* 폴더별 일괄 생성 관련 스타일 */
+.folder-batch-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.folder-batch-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.batch-generate-modal {
+  max-width: 1000px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.batch-variables-section {
+  margin-bottom: 2rem;
+}
+
+.batch-info {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 1.5rem;
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.batch-variables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.batch-variable-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.batch-variable-input label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.usage-info {
+  font-weight: 400;
+  color: #6b7280;
+  font-size: 12px;
+  margin-left: 0.5rem;
+}
+
+.batch-variable-input input {
+  padding: 10px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.batch-variable-input input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.batch-generate-btn {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  width: 100%;
+}
+
+.batch-generate-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.batch-generate-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.batch-results-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #e5e7eb;
+}
+
+.batch-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.batch-result-item {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s;
+}
+
+.batch-result-item:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.result-header h5 {
+  margin: 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.copy-result-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-result-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.result-content {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.result-content pre {
+  margin: 0;
+  padding: 0;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #374151;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.no-common-variables {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #6b7280;
+}
+
+.no-common-variables p {
+  margin: 0.5rem 0;
+  font-size: 16px;
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
   .ai-input-row {
@@ -1661,5 +1853,18 @@ main {
   
   .results-actions {
     justify-content: center;
+  }
+  
+  .batch-generate-modal {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .batch-variables-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .batch-results-grid {
+    grid-template-columns: 1fr;
   }
 }
