@@ -159,9 +159,10 @@ function App() {
         console.log(`템플릿 "${template.name}" (folder_id: ${template.folder_id}) === 선택된 폴더 (${folder.id}):`, matches);
         return matches;
       } else {
-        // "전체" 선택 시 모든 템플릿 표시
-        console.log(`템플릿 "${template.name}" (folder_id: ${template.folder_id}) 전체 표시`);
-        return true;
+        // "미지정" 선택 시 folder_id가 null인 템플릿만 표시
+        const isUnassigned = template.folder_id === null || template.folder_id === undefined;
+        console.log(`템플릿 "${template.name}" (folder_id: ${template.folder_id}) 미지정 표시:`, isUnassigned);
+        return isUnassigned;
       }
     });
     
@@ -917,8 +918,8 @@ function App() {
                   onClick={() => handleFolderSelect(null)}
                 >
                   <div className="folder-icon">📁</div>
-                  <div className="folder-name">전체</div>
-                  <div className="folder-count">({allTemplates.length}개)</div>
+                  <div className="folder-name">미지정</div>
+                  <div className="folder-count">({allTemplates.filter(t => t.folder_id === null || t.folder_id === undefined).length}개)</div>
                 </div>
                 {folders.map(folder => (
                   <div 
