@@ -1577,7 +1577,7 @@ function App() {
                     <div className="batch-variables-section">
                       <h4>📝 공통 변수 입력</h4>
                       <p className="batch-info">
-                        이 폴더의 {commonVariables.length}개 공통 변수를 입력하면 모든 템플릿이 일괄 생성됩니다.
+                        이 폴더의 {commonVariables.length}개 변수를 입력하면 모든 템플릿이 일괄 생성됩니다.
                       </p>
                       
                       <div className="batch-variables-grid">
