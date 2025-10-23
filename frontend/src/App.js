@@ -160,6 +160,13 @@ function App() {
     setBatchResults([]);
     setBatchError(null);
     
+    // 개별 템플릿 변수 입력 상태 초기화
+    setSelectedTemplate(null);
+    setTemplateVariables({});
+    setFinalPrompt('');
+    setError(null);
+    setCopied(false);
+    
     // 선택된 폴더의 템플릿만 필터링
     const filteredTemplates = allTemplates.filter(template => {
       if (folder) {
@@ -1660,7 +1667,7 @@ function App() {
                       
                       <button 
                         onClick={handleExecuteBatchGenerate}
-                        disabled={batchLoading || Object.keys(batchVariables).length === 0}
+                        disabled={batchLoading || Object.keys(batchVariables).length !== commonVariables.length || Object.values(batchVariables).some(value => !value.trim())}
                         className="batch-generate-btn"
                       >
                         {batchLoading ? '생성 중...' : '🚀 일괄 생성하기'}
