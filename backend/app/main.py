@@ -520,13 +520,26 @@ async def get_folder_common_variables(folder_id: int):
     # 모든 변수 찾기 (폴더 내 모든 템플릿의 변수들)
     common_variables = []
     for var in all_variables:
-        count = sum(1 for tv in template_variables.values() if var in tv["variables"])
-        # 모든 변수를 표시 (1개 템플릿에서만 사용되는 변수도 포함)
-        common_variables.append({
-            "name": var,
-            "usage_count": count,
-            "usage_percentage": round((count / len(templates)) * 100, 1)
-        })
+        # 이 변수를 사용하는 템플릿들 찾기
+        using_templates = [tv for tv in template_variables.values() if var in tv["variables"]]
+        count = len(using_templates)
+        
+        # 1개 템플릿에서만 사용되는 경우 템플릿 이름 포함
+        if count == 1:
+            template_name = using_templates[0]["name"]
+            common_variables.append({
+                "name": var,
+                "usage_count": count,
+                "usage_percentage": round((count / len(templates)) * 100, 1),
+                "template_name": template_name
+            })
+        else:
+            # 2개 이상 템플릿에서 사용되는 경우
+            common_variables.append({
+                "name": var,
+                "usage_count": count,
+                "usage_percentage": round((count / len(templates)) * 100, 1)
+            })
     
     # 사용 빈도순으로 정렬
     common_variables.sort(key=lambda x: x["usage_count"], reverse=True)

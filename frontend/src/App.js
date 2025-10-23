@@ -771,6 +771,38 @@ function App() {
     }));
   };
 
+  // 변수 분류 함수
+  const categorizeVariable = (variableName) => {
+    // 핑퐁 관련 키워드
+    if (variableName.includes('핑퐁') || variableName.includes('핑') || variableName.includes('퐁')) {
+      return '핑퐁 관련';
+    }
+    // 아동 관련 키워드  
+    else if (variableName.includes('아동') || variableName.includes('아이') || variableName.includes('어린이')) {
+      return '아동 관련';
+    }
+    // 나머지는 모두 기타
+    else {
+      return '기타';
+    }
+  };
+
+  // 변수 그룹핑 함수
+  const groupVariables = (variables) => {
+    const groups = {
+      '핑퐁 관련': [],
+      '아동 관련': [],
+      '기타': []
+    };
+    
+    variables.forEach(variable => {
+      const category = categorizeVariable(variable.name);
+      groups[category].push(variable);
+    });
+    
+    return groups;
+  };
+
   const handleExecuteBatchGenerate = async () => {
     if (!batchGenerateFolder) return;
     
@@ -1588,24 +1620,43 @@ function App() {
                         이 폴더의 {commonVariables.length}개 변수를 입력하면 모든 템플릿이 일괄 생성됩니다.
                       </p>
                       
-                      <div className="batch-variables-grid">
-                        {commonVariables.map((variable, index) => (
-                          <div key={index} className="batch-variable-input">
-                            <label>
-                              {variable.name}
-                              <span className="usage-info">
-                                ({variable.usage_count}개 템플릿에서 사용, {variable.usage_percentage}%)
-                              </span>
-                            </label>
-                            <input
-                              type="text"
-                              value={batchVariables[variable.name] || ''}
-                              onChange={(e) => handleBatchVariableChange(variable.name, e.target.value)}
-                              placeholder={`${variable.name}을(를) 입력하세요`}
-                            />
-                          </div>
-                        ))}
-                      </div>
+                      {(() => {
+                        const variableGroups = groupVariables(commonVariables);
+                        return Object.entries(variableGroups).map(([groupName, variables]) => {
+                          if (variables.length === 0) return null;
+                          
+                          return (
+                            <div key={groupName} className="variable-group">
+                              <h5 className="group-title">
+                                {groupName === '핑퐁 관련' && '🧑‍🤝‍🧑 핑퐁 관련'}
+                                {groupName === '아동 관련' && '👶 아동 관련'}
+                                {groupName === '기타' && '📝 기타'}
+                                <span className="group-count">({variables.length}개)</span>
+                              </h5>
+                              <div className="group-variables">
+                                {variables.map((variable, index) => (
+                                  <div key={index} className="batch-variable-input">
+                                    <label>
+                                      {variable.name}
+                                      {variable.usage_count === 1 && variable.template_name && (
+                                        <span className="usage-info">
+                                          ({variable.template_name}에서 사용)
+                                        </span>
+                                      )}
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={batchVariables[variable.name] || ''}
+                                      onChange={(e) => handleBatchVariableChange(variable.name, e.target.value)}
+                                      placeholder={`${variable.name}을(를) 입력하세요`}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
                       
                       <button 
                         onClick={handleExecuteBatchGenerate}
