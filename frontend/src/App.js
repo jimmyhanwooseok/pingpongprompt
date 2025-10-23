@@ -152,6 +152,14 @@ function App() {
     console.log('전체 템플릿 수:', allTemplates.length);
     setSelectedFolder(folder);
     
+    // 폴더 선택 시 일괄 생성 모달 닫기
+    setShowBatchGenerateModal(false);
+    setBatchGenerateFolder(null);
+    setCommonVariables([]);
+    setBatchVariables({});
+    setBatchResults([]);
+    setBatchError(null);
+    
     // 선택된 폴더의 템플릿만 필터링
     const filteredTemplates = allTemplates.filter(template => {
       if (folder) {
