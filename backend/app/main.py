@@ -356,9 +356,9 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
             # 첫 번째 컬럼이 비어있거나 구분자가 없으면 내용 추가
             elif current_name and current_content:
                 # 현재 템플릿의 내용에 이 줄 추가 (Excel의 "" -> " 변환, 들여쓰기 유지)
-                # 원본 줄 그대로 추가 ("" -> " 만 변환)
+                # 원본 줄 그대로 추가 ("" -> " 만 변환, 줄바꿈 추가)
                 line_processed = line.replace('""', '"')
-                current_content += line_processed
+                current_content += "\n" + line_processed
             
             # 컬럼이 너무 적으면 스킵
             else:
