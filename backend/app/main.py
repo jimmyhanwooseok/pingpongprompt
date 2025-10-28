@@ -339,13 +339,11 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
                 content_raw = parts[2].strip() if len(parts) > 2 else ""
                 # Excel에서 복사할 때 ""가 되므로 "로 변환
                 current_content = content_raw.replace('""', '"')
-                # 시작과 끝의 따옴표 제거 (전체가 단일 따옴표로 둘러싸인 경우만)
-                if len(current_content) >= 2 and current_content.startswith('"') and current_content.endswith('"'):
-                    # 제외: 내용 자체에 따옴표가 시작과 끝에 있는 경우만 제거
-                    # 예: "내용" -> 내용, "# Variables..." -> "# Variables..." (그대로 유지)
-                    # 만약 전체가 하나의 문자열로 둘러싸여 있는 경우만
-                    if current_content.count('"') == 2:
-                        current_content = current_content[1:-1]
+                # 시작과 끝의 따옴표 제거 (Excel이 전체를 감싸는 따옴표)
+                if len(current_content) >= 2 and current_content.startswith('"'):
+                    current_content = current_content[1:]
+                if len(current_content) >= 1 and current_content.endswith('"'):
+                    current_content = current_content[:-1]
                 
                 if len(parts) > 3:
                     current_tags = {
