@@ -335,9 +335,10 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
                 # 새 템플릿 시작
                 current_name = parts[0].strip()
                 current_description = parts[1].strip() if len(parts) > 1 else ""
-                # 내용에서 따옴표 이스케이프 처리 (Excel에서 복사할 때 "" -> " 로 변환됨을 방지)
+                # 내용에서 따옴표 이스케이프 처리 (Excel에서 복사할 때 "" -> " 로 변환)
                 content_raw = parts[2].strip() if len(parts) > 2 else ""
-                current_content = content_raw
+                # Excel에서 복사할 때 ""가 되므로 "로 변환
+                current_content = content_raw.replace('""', '"')
                 
                 if len(parts) > 3:
                     current_tags = {
@@ -350,8 +351,8 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
             
             # 첫 번째 컬럼이 비어있거나 구분자가 없으면 내용 추가
             elif current_name and current_content:
-                # 현재 템플릿의 내용에 이 줄 추가
-                current_content += "\n" + line
+                # 현재 템플릿의 내용에 이 줄 추가 (Excel의 "" -> " 변환)
+                current_content += "\n" + line.replace('""', '"')
             
             # 컬럼이 너무 적으면 스킵
             else:
