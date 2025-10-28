@@ -283,10 +283,11 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
     """간단한 형식으로 템플릿 일괄 추가 (Excel 복사/붙여넣기)"""
     import re
     
-    lines = simple_import.text.strip().split('\n')
+    # 원본 텍스트를 그대로 보존 (줄바꿈, 탭, 공백 모두 유지)
+    lines = simple_import.text.split('\n')
     
     # 첫 번째 줄이 헤더인지 확인
-    if len(lines) > 0 and (lines[0].startswith('이름') or lines[0].startswith('템플릿')):
+    if len(lines) > 0 and lines[0].strip().startswith('이름') or (lines[0].strip().startswith('템플릿')):
         lines = lines[1:]  # 헤더 제거
     
     conn = get_db()
@@ -304,13 +305,12 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
     current_tags = {}
     
     for line in lines:
-        # 첫 줄은 strip()하고, 나머지는 들여쓰기 유지를 위해 원본 보존
-        line_stripped = line.strip()
-        if not line_stripped:
+        # 공백 줄은 건너뛰기 (원본 줄 보존)
+        if not line.strip():
             continue
             
         try:
-            # 탭 또는 | 로 구분된 데이터 파싱
+            # 탭 또는 | 로 구분된 데이터 파싱 (원본 줄 사용)
             parts = re.split(r'\t+|\s*\|\s*', line)
             
             # 첫 번째 컬럼이 템플릿 이름이고, 3개 이상 컬럼이 있으면 새 템플릿
@@ -340,6 +340,9 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
                 content_raw = parts[2].strip() if len(parts) > 2 else ""
                 # Excel에서 복사할 때 ""가 되므로 "로 변환
                 current_content = content_raw.replace('""', '"')
+                # 시작과 끝의 따옴표 제거
+                if current_content.startswith('"') and current_content.endswith('"'):
+                    current_content = current_content[1:-1]
                 
                 if len(parts) > 3:
                     current_tags = {
@@ -353,9 +356,9 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
             # 첫 번째 컬럼이 비어있거나 구분자가 없으면 내용 추가
             elif current_name and current_content:
                 # 현재 템플릿의 내용에 이 줄 추가 (Excel의 "" -> " 변환, 들여쓰기 유지)
-                # 원본 줄에서 줄바꿈 제거한 뒤 다시 추가
-                line_processed = line.rstrip().replace('""', '"')  # 오른쪽 공백만 제거
-                current_content += "\n" + line_processed
+                # 원본 줄 그대로 추가 ("" -> " 만 변환)
+                line_processed = line.replace('""', '"')
+                current_content += line_processed
             
             # 컬럼이 너무 적으면 스킵
             else:
