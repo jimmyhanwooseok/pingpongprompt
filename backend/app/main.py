@@ -371,6 +371,11 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
     
     # 마지막 템플릿 저장
     if current_name and current_content:
+        # 끝의 따옴표가 줄바꿈 바로 뒤에 있는 경우 제거
+        current_content = current_content.rstrip()
+        if current_content.endswith('"'):
+            current_content = current_content[:-1].rstrip()
+        
         tags = {
             "용도": current_tags.get("용도", ""),
             "회기": current_tags.get("회기", ""),
