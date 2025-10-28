@@ -335,7 +335,9 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
                 # 새 템플릿 시작
                 current_name = parts[0].strip()
                 current_description = parts[1].strip() if len(parts) > 1 else ""
-                current_content = parts[2].strip() if len(parts) > 2 else ""
+                # 내용에서 따옴표 이스케이프 처리 (Excel에서 복사할 때 "" -> " 로 변환됨을 방지)
+                content_raw = parts[2].strip() if len(parts) > 2 else ""
+                current_content = content_raw
                 
                 if len(parts) > 3:
                     current_tags = {
