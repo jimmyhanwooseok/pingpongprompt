@@ -304,8 +304,9 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
     current_tags = {}
     
     for line in lines:
-        line = line.strip()
-        if not line:
+        # 첫 줄은 strip()하고, 나머지는 들여쓰기 유지를 위해 원본 보존
+        line_stripped = line.strip()
+        if not line_stripped:
             continue
             
         try:
@@ -351,8 +352,10 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
             
             # 첫 번째 컬럼이 비어있거나 구분자가 없으면 내용 추가
             elif current_name and current_content:
-                # 현재 템플릿의 내용에 이 줄 추가 (Excel의 "" -> " 변환)
-                current_content += "\n" + line.replace('""', '"')
+                # 현재 템플릿의 내용에 이 줄 추가 (Excel의 "" -> " 변환, 들여쓰기 유지)
+                # 원본 줄에서 줄바꿈 제거한 뒤 다시 추가
+                line_processed = line.rstrip().replace('""', '"')  # 오른쪽 공백만 제거
+                current_content += "\n" + line_processed
             
             # 컬럼이 너무 적으면 스킵
             else:
