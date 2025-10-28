@@ -286,7 +286,7 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
     lines = simple_import.text.strip().split('\n')
     
     # 첫 번째 줄이 헤더인지 확인
-    if lines[0].startswith('이름') or lines[0].startswith('템플릿'):
+    if len(lines) > 0 and (lines[0].startswith('이름') or lines[0].startswith('템플릿')):
         lines = lines[1:]  # 헤더 제거
     
     conn = get_db()
@@ -297,6 +297,12 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
     error_count = 0
     errors = []
     
+    # 현재 템플릿 변수
+    current_name = ""
+    current_description = ""
+    current_content = ""
+    current_tags = {}
+    
     for line in lines:
         line = line.strip()
         if not line:
@@ -306,38 +312,73 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
             # 탭 또는 | 로 구분된 데이터 파싱
             parts = re.split(r'\t+|\s*\|\s*', line)
             
-            if len(parts) < 3:
+            # 첫 번째 컬럼이 템플릿 이름이고, 3개 이상 컬럼이 있으면 새 템플릿
+            if len(parts) >= 3:
+                # 이전 템플릿 저장 (있으면)
+                if current_name and current_content:
+                    tags = {
+                        "용도": current_tags.get("용도", ""),
+                        "회기": current_tags.get("회기", ""),
+                        "아동유형": current_tags.get("아동유형", "")
+                    }
+                    
+                    try:
+                        c.execute(
+                            "INSERT INTO templates (name, description, fixed_content, variables, tags, folder_id) VALUES (?, ?, ?, ?, ?, ?)",
+                            (current_name, current_description, current_content, "{}", json.dumps(tags), None)
+                        )
+                        success_count += 1
+                    except sqlite3.IntegrityError:
+                        skip_count += 1
+                        errors.append(f"템플릿 '{current_name}' 이미 존재함")
+                
+                # 새 템플릿 시작
+                current_name = parts[0].strip()
+                current_description = parts[1].strip() if len(parts) > 1 else ""
+                current_content = parts[2].strip() if len(parts) > 2 else ""
+                
+                if len(parts) > 3:
+                    current_tags = {
+                        "용도": parts[3].strip() if len(parts) > 3 else "",
+                        "회기": parts[4].strip() if len(parts) > 4 else "",
+                        "아동유형": parts[5].strip() if len(parts) > 5 else ""
+                    }
+                else:
+                    current_tags = {}
+            
+            # 첫 번째 컬럼이 비어있거나 구분자가 없으면 내용 추가
+            elif current_name and current_content:
+                # 현재 템플릿의 내용에 이 줄 추가
+                current_content += "\n" + line
+            
+            # 컬럼이 너무 적으면 스킵
+            else:
                 continue
-            
-            # 입력 형식: 이름 | 설명 | 내용 | 용도 | 회기 | 아동유형
-            name = parts[0].strip()
-            description = parts[1].strip() if len(parts) > 1 else ""
-            fixed_content = parts[2].strip() if len(parts) > 2 else ""
-            tags_usage = parts[3].strip() if len(parts) > 3 else ""
-            tags_session = parts[4].strip() if len(parts) > 4 else ""
-            tags_type = parts[5].strip() if len(parts) > 5 else ""
-            
-            if not name or not fixed_content:
-                continue
-            
-            tags = {
-                "용도": tags_usage,
-                "회기": tags_session,
-                "아동유형": tags_type
-            }
-            
-            # 데이터베이스에 추가
+                
+        except Exception as e:
+            error_count += 1
+            errors.append(f"파싱 실패: {str(e)}")
+    
+    # 마지막 템플릿 저장
+    if current_name and current_content:
+        tags = {
+            "용도": current_tags.get("용도", ""),
+            "회기": current_tags.get("회기", ""),
+            "아동유형": current_tags.get("아동유형", "")
+        }
+        
+        try:
             c.execute(
                 "INSERT INTO templates (name, description, fixed_content, variables, tags, folder_id) VALUES (?, ?, ?, ?, ?, ?)",
-                (name, description, fixed_content, "{}", json.dumps(tags), None)
+                (current_name, current_description, current_content, "{}", json.dumps(tags), None)
             )
             success_count += 1
         except sqlite3.IntegrityError:
             skip_count += 1
-            errors.append(f"템플릿 '{name}' 이미 존재함")
+            errors.append(f"템플릿 '{current_name}' 이미 존재함")
         except Exception as e:
             error_count += 1
-            errors.append(f"템플릿 '{name}' 추가 실패: {str(e)}")
+            errors.append(f"템플릿 '{current_name}' 추가 실패: {str(e)}")
     
     conn.commit()
     conn.close()
