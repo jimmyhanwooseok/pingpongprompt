@@ -94,6 +94,13 @@ function App() {
   const [inlineAILoading, setInlineAILoading] = useState(false);
   const [inlineAIError, setInlineAIError] = useState(null);
 
+  // 일괄 임포트 관련 상태
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkImportText, setBulkImportText] = useState('');
+  const [bulkImportLoading, setBulkImportLoading] = useState(false);
+  const [bulkImportResult, setBulkImportResult] = useState(null);
+  const [importFormat, setImportFormat] = useState('simple'); // 'simple' 또는 'json'
+
   // 폴더별 일괄 생성 관련 상태
   const [showBatchGenerateModal, setShowBatchGenerateModal] = useState(false);
   const [batchGenerateFolder, setBatchGenerateFolder] = useState(null);
@@ -854,6 +861,61 @@ function App() {
     );
   };
 
+  // 일괄 임포트 처리 함수
+  const handleBulkImport = async () => {
+    if (!bulkImportText.trim()) {
+      setError('템플릿 데이터를 입력해주세요.');
+      return;
+    }
+
+    setBulkImportLoading(true);
+    setBulkImportResult(null);
+    setError(null);
+
+    try {
+      let result;
+      
+      if (importFormat === 'simple') {
+        // 간단한 형식 (Excel 스타일)
+        const response = await fetch(`${API_BASE_URL}/templates/simple-import/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: bulkImportText,
+            format: 'simple'
+          })
+        });
+        result = await response.json();
+      } else {
+        // JSON 형식
+        const parsedData = JSON.parse(bulkImportText);
+        const templates = Array.isArray(parsedData) ? parsedData : [parsedData];
+        
+        const response = await fetch(`${API_BASE_URL}/templates/bulk-import/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templates: templates,
+            skip_duplicates: true
+          })
+        });
+        result = await response.json();
+      }
+      
+      setBulkImportResult(result);
+      
+      // 성공 시 템플릿 목록 새로고침
+      if (result.success_count > 0) {
+        fetchTemplates();
+      }
+    } catch (err) {
+      setError('템플릿 데이터 형식이 올바르지 않습니다. ' + err.message);
+      console.error(err);
+    } finally {
+      setBulkImportLoading(false);
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -880,12 +942,23 @@ function App() {
             </button>
           </div>
           {activeTab !== 'ai-generator' && (
-            <button 
-              onClick={activeTab === 'templates' ? handleCreateTemplate : handleCreateContent}
-              className="create-btn"
-            >
-              + 새 {activeTab === 'templates' ? '템플릿' : '콘텐츠'} 만들기
-            </button>
+            <>
+              <button 
+                onClick={activeTab === 'templates' ? handleCreateTemplate : handleCreateContent}
+                className="create-btn"
+              >
+                + 새 {activeTab === 'templates' ? '템플릿' : '콘텐츠'} 만들기
+              </button>
+              {activeTab === 'templates' && (
+                <button 
+                  onClick={() => setShowBulkImport(true)}
+                  className="create-btn"
+                  style={{marginLeft: '10px', backgroundColor: '#10b981'}}
+                >
+                  📥 일괄 임포트
+                </button>
+              )}
+            </>
           )}
         </div>
       </header>
@@ -1402,7 +1475,21 @@ function App() {
         {showTemplateManager && (
           <div className="modal-backdrop">
             <div className="modal">
-              <h3>{editingTemplate ? '템플릿 수정' : '새 템플릿 만들기'}</h3>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+                <h3>{editingTemplate ? '템플릿 수정' : '새 템플릿 만들기'}</h3>
+                {!editingTemplate && (
+                  <button 
+                    onClick={() => {
+                      setShowTemplateManager(false);
+                      setShowBulkImport(true);
+                    }}
+                    className="create-btn"
+                    style={{fontSize: '14px', padding: '8px 16px'}}
+                  >
+                    📥 일괄 임포트
+                  </button>
+                )}
+              </div>
               
               <div className="form-group">
                 <label>템플릿 이름:</label>
@@ -1482,6 +1569,120 @@ function App() {
               <div className="modal-btns">
                 <button onClick={handleTemplateSave} className="save-btn">저장</button>
                 <button onClick={() => setShowTemplateManager(false)} className="cancel-btn">취소</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 일괄 임포트 모달 */}
+        {showBulkImport && (
+          <div className="modal-backdrop">
+            <div className="modal" style={{maxWidth: '800px'}}>
+              <h3>📥 일괄 템플릿 임포트</h3>
+              
+              {/* 형식 선택 */}
+              <div className="form-group">
+                <label>입력 형식:</label>
+                <select 
+                  value={importFormat} 
+                  onChange={(e) => setImportFormat(e.target.value)}
+                  style={{width: '100%', padding: '8px', marginBottom: '10px'}}
+                >
+                  <option value="simple">📊 간단한 형식 (Excel 스타일)</option>
+                  <option value="json">⚙️ JSON 형식</option>
+                </select>
+              </div>
+              
+              <div style={{marginBottom: '20px'}}>
+                {importFormat === 'simple' ? (
+                  <>
+                    <p style={{fontSize: '14px', color: '#666', marginBottom: '10px'}}>
+                      Excel에서 템플릿을 복사해서 붙여넣으세요! 탭 또는 | 로 구분하면 됩니다.
+                    </p>
+                    <div style={{fontSize: '12px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px', marginBottom: '10px'}}>
+                      <strong>📊 간단한 형식 예시:</strong>
+                      <pre style={{margin: '5px 0', fontSize: '11px', overflow: 'auto'}}>{`템플릿 이름 | 설명 | 고정된 내용 {{{변수1}}} | 용도 | 회기 | 아동유형
+체크인 미니특공대 | 체크인 문장 | 안녕 {{{이름}}}! 볼트처럼 변신하고 싶어? | 체크인 | 1회기 | 소극형`}</pre>
+                      <p style={{fontSize: '11px', margin: '5px 0', color: '#666'}}>
+                        💡 Excel에서 복사하면 자동으로 탭으로 구분됩니다!
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{fontSize: '14px', color: '#666', marginBottom: '10px'}}>
+                      JSON 형식으로 여러 템플릿을 한 번에 추가할 수 있습니다.
+                    </p>
+                    <div style={{fontSize: '12px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px', marginBottom: '10px'}}>
+                      <strong>예시:</strong>
+                      <pre style={{margin: '5px 0', fontSize: '11px', overflow: 'auto'}}>{`[
+  {
+    "name": "템플릿 이름",
+    "description": "설명",
+    "fixed_content": "고정된 내용 {{{변수1}}}",
+    "variables": {},
+    "tags": {"용도": "체크인", "회기": "1회기", "아동유형": "소극형"}
+  }
+]`}</pre>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>템플릿 데이터:</label>
+                <textarea
+                  value={bulkImportText}
+                  onChange={(e) => setBulkImportText(e.target.value)}
+                  placeholder={importFormat === 'simple' 
+                    ? 'Excel에서 복사한 템플릿 데이터를 붙여넣으세요...\n예: 체크인 미니특공대 | 설명 | 안녕 {{{이름}}}! | 체크인 | 1회기 | 소극형'
+                    : '여기에 JSON 형식의 템플릿 데이터를 붙여넣으세요...'}
+                  rows={15}
+                  style={{fontFamily: 'monospace', fontSize: '12px'}}
+                />
+              </div>
+
+              {error && <p className="error">{error}</p>}
+
+              {bulkImportResult && (
+                <div style={{marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px'}}>
+                  <h4>임포트 결과:</h4>
+                  <ul style={{margin: '10px 0', paddingLeft: '20px'}}>
+                    <li>✅ 성공: {bulkImportResult.success_count}개</li>
+                    <li>⏭️ 건너뜀: {bulkImportResult.skip_count}개</li>
+                    <li>❌ 실패: {bulkImportResult.error_count}개</li>
+                  </ul>
+                  {bulkImportResult.errors.length > 0 && (
+                    <div style={{marginTop: '10px'}}>
+                      <strong>에러 목록:</strong>
+                      <ul style={{margin: '5px 0', paddingLeft: '20px', fontSize: '12px'}}>
+                        {bulkImportResult.errors.map((err, idx) => (
+                          <li key={idx} style={{color: '#d32f2f'}}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="modal-btns">
+                <button 
+                  onClick={handleBulkImport} 
+                  disabled={bulkImportLoading || !bulkImportText.trim()}
+                  className="save-btn"
+                >
+                  {bulkImportLoading ? '임포트 중...' : '📥 임포트하기'}
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowBulkImport(false);
+                    setBulkImportText('');
+                    setBulkImportResult(null);
+                  }} 
+                  className="cancel-btn"
+                >
+                  닫기
+                </button>
               </div>
             </div>
           </div>

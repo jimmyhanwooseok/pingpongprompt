@@ -230,6 +230,126 @@ async def create_template(template: Template):
     finally:
         conn.close()
 
+# 일괄 템플릿 임포트 API
+class BulkTemplateImport(BaseModel):
+    templates: List[Template]
+    skip_duplicates: bool = True
+
+class SimpleBulkImport(BaseModel):
+    text: str  # CSV 형식 또는 간단한 형식
+    format: str = "csv"  # "csv" 또는 "simple"
+
+@app.post("/templates/bulk-import/")
+async def bulk_import_templates(bulk_import: BulkTemplateImport):
+    """여러 템플릿을 한 번에 추가합니다."""
+    conn = get_db()
+    c = conn.cursor()
+    
+    success_count = 0
+    skip_count = 0
+    error_count = 0
+    errors = []
+    
+    for template in bulk_import.templates:
+        try:
+            c.execute(
+                "INSERT INTO templates (name, description, fixed_content, variables, tags, folder_id) VALUES (?, ?, ?, ?, ?, ?)",
+                (template.name, template.description, template.fixed_content, json.dumps(template.variables), json.dumps(template.tags), template.folder_id)
+            )
+            success_count += 1
+        except sqlite3.IntegrityError:
+            if bulk_import.skip_duplicates:
+                skip_count += 1
+            else:
+                error_count += 1
+                errors.append(f"템플릿 '{template.name}' 이미 존재함")
+        except Exception as e:
+            error_count += 1
+            errors.append(f"템플릿 '{template.name}' 추가 실패: {str(e)}")
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        "success_count": success_count,
+        "skip_count": skip_count,
+        "error_count": error_count,
+        "errors": errors,
+        "total": len(bulk_import.templates)
+    }
+
+@app.post("/templates/simple-import/")
+async def simple_bulk_import(simple_import: SimpleBulkImport):
+    """간단한 형식으로 템플릿 일괄 추가 (Excel 복사/붙여넣기)"""
+    import re
+    
+    lines = simple_import.text.strip().split('\n')
+    
+    # 첫 번째 줄이 헤더인지 확인
+    if lines[0].startswith('이름') or lines[0].startswith('템플릿'):
+        lines = lines[1:]  # 헤더 제거
+    
+    conn = get_db()
+    c = conn.cursor()
+    
+    success_count = 0
+    skip_count = 0
+    error_count = 0
+    errors = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        try:
+            # 탭 또는 | 로 구분된 데이터 파싱
+            parts = re.split(r'\t+|\s*\|\s*', line)
+            
+            if len(parts) < 3:
+                continue
+            
+            # 입력 형식: 이름 | 설명 | 내용 | 용도 | 회기 | 아동유형
+            name = parts[0].strip()
+            description = parts[1].strip() if len(parts) > 1 else ""
+            fixed_content = parts[2].strip() if len(parts) > 2 else ""
+            tags_usage = parts[3].strip() if len(parts) > 3 else ""
+            tags_session = parts[4].strip() if len(parts) > 4 else ""
+            tags_type = parts[5].strip() if len(parts) > 5 else ""
+            
+            if not name or not fixed_content:
+                continue
+            
+            tags = {
+                "용도": tags_usage,
+                "회기": tags_session,
+                "아동유형": tags_type
+            }
+            
+            # 데이터베이스에 추가
+            c.execute(
+                "INSERT INTO templates (name, description, fixed_content, variables, tags, folder_id) VALUES (?, ?, ?, ?, ?, ?)",
+                (name, description, fixed_content, "{}", json.dumps(tags), None)
+            )
+            success_count += 1
+        except sqlite3.IntegrityError:
+            skip_count += 1
+            errors.append(f"템플릿 '{name}' 이미 존재함")
+        except Exception as e:
+            error_count += 1
+            errors.append(f"템플릿 '{name}' 추가 실패: {str(e)}")
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        "success_count": success_count,
+        "skip_count": skip_count,
+        "error_count": error_count,
+        "errors": errors,
+        "total": len(lines)
+    }
+
 # 폴더 관련 API
 @app.get("/folders/")
 async def get_folders():
