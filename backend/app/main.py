@@ -305,9 +305,8 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
     current_tags = {}
     
     for line in lines:
-        # 공백 줄은 건너뛰기 (원본 줄 보존)
-        if not line.strip():
-            continue
+        # 공백 줄도 원본 유지 (줄바꿈 2개로 문단 구분)
+        is_blank_line = not line.strip()
             
         try:
             # 탭 또는 | 로 구분된 데이터 파싱 (원본 줄 사용)
@@ -340,9 +339,13 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
                 content_raw = parts[2].strip() if len(parts) > 2 else ""
                 # Excel에서 복사할 때 ""가 되므로 "로 변환
                 current_content = content_raw.replace('""', '"')
-                # 시작과 끝의 따옴표 제거
-                if current_content.startswith('"') and current_content.endswith('"'):
-                    current_content = current_content[1:-1]
+                # 시작과 끝의 따옴표 제거 (전체가 단일 따옴표로 둘러싸인 경우만)
+                if len(current_content) >= 2 and current_content.startswith('"') and current_content.endswith('"'):
+                    # 제외: 내용 자체에 따옴표가 시작과 끝에 있는 경우만 제거
+                    # 예: "내용" -> 내용, "# Variables..." -> "# Variables..." (그대로 유지)
+                    # 만약 전체가 하나의 문자열로 둘러싸여 있는 경우만
+                    if current_content.count('"') == 2:
+                        current_content = current_content[1:-1]
                 
                 if len(parts) > 3:
                     current_tags = {
@@ -356,7 +359,7 @@ async def simple_bulk_import(simple_import: SimpleBulkImport):
             # 첫 번째 컬럼이 비어있거나 구분자가 없으면 내용 추가
             elif current_name and current_content:
                 # 현재 템플릿의 내용에 이 줄 추가 (Excel의 "" -> " 변환, 들여쓰기 유지)
-                # 원본 줄 그대로 추가 ("" -> " 만 변환, 줄바꿈 추가)
+                # 공백 줄도 그대로 추가 (문단 구분용)
                 line_processed = line.replace('""', '"')
                 current_content += "\n" + line_processed
             
